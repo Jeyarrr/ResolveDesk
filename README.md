@@ -2,121 +2,142 @@
 
 A modern IT Help Desk & Ticket Management System designed to streamline technical support requests, ticket assignments, issue tracking, and resolution workflows.
 
-ResolveDesk is a planned internal company IT support platform where employees can submit technical support tickets, IT personnel can manage and resolve issues, and administrators can oversee support operations.
-
 ## Development status
 
-**Planning / repository initialization.** This repository currently contains project documentation and Git configuration only. The application, database schema, authentication, and features described below have not been implemented.
+**Phase 2 implemented; Neon and production verification pending.** The React interface connects to Express APIs and PostgreSQL. Automated integration checks use isolated PostgreSQL through PGlite and never connect to a shared database. A real Neon connection, production onboarding, and production verification are still required before deployment.
 
-## Project objectives
+## Objectives and functionality
 
-- Centralize employee technical support requests in one accessible platform.
-- Give IT support teams a clear process for triage, assignment, escalation, and resolution.
-- Improve communication and visibility throughout a ticket's lifecycle.
-- Help administrators monitor service quality, workloads, and SLA performance.
-- Preserve support knowledge and ticket history to improve future resolutions.
+- Employees submit and track their own support tickets and public conversations.
+- Support agents manage assigned tickets, follow status transitions, and add internal notes.
+- Administrators manage organizational tickets, assignments, priorities, accounts, departments, and categories.
+- Database sessions, Argon2id password hashing, CSRF protection, role checks, and object-level authorization.
+- Persistent conversations and transactional ticket activity history.
+- Server pagination, search, category/priority/status filtering, and sorting.
+- Role-scoped dashboards and database reports, trends, status and priority distributions.
+- Responsive navigation, dark/light themes, keyboard navigation, and sample knowledge guides.
 
-## Planned core features
+**Deferred:** password recovery/email invitations, production account onboarding, file uploads, real-time notifications, SLA automation, MFA, advanced analytics, and the knowledge base backend. Screens explicitly describe availability. No public registration or demo role bypass exists.
 
-All features in this section are planned:
+## Stack and architecture
 
-- **User roles:** Employee, IT Support, and Administrator.
-- **Authentication and authorization:** Secure sign-in and role-based access to application features and data.
-- **Ticket management:** Create, view, update, and resolve IT support tickets.
-- **Ticket classification:** Track priority, category, and status.
-- **Assignment and escalation:** Route tickets to support personnel and escalate issues as needed.
-- **Conversations and notifications:** Real-time ticket discussions and updates.
-- **Analytics and reporting:** Administrative dashboards for support operations.
-- **SLA monitoring:** Track response and resolution targets.
-- **Knowledge base:** Publish and discover IT support articles.
-- **Activity history:** Record ticket changes and support actions.
+React 19 · TypeScript · Vite · Tailwind CSS 4 · Radix/shadcn-style UI · TanStack Query · React Hook Form · Zod · Express 5 · Drizzle ORM/Kit · PostgreSQL (Neon) · node-postgres · Argon2id.
 
-## Planned technology stack
+Browser → React/TanStack Query → credentialed Express REST API → permission-aware services/repositories → bounded pg pool → Neon PostgreSQL.
 
-| Layer | Technology | Intended use |
-| --- | --- | --- |
-| Frontend | React and TypeScript | Role-aware web interface |
-| Styling | Tailwind CSS | Responsive application styling |
-| Backend runtime | Node.js | Server-side application runtime |
-| API framework | Express.js and TypeScript | HTTP API, validation, and business logic |
-| Database | PostgreSQL | Persistent application data |
+- `client/src`: UI, API client, query hooks, session provider, feature pages.
+- `server/src`: configuration, routes/controllers, services, repositories, middleware, validation, database schema/scripts.
+- `server/drizzle`: generated, versioned SQL migrations and snapshots.
+- `docs`: [architecture](docs/architecture.md), [database](docs/database-plan.md), [authentication](docs/authentication.md), [permissions](docs/role-permissions.md), [API](docs/api-roadmap.md), [ticket lifecycle](docs/ticket-lifecycle.md), [deployment](docs/deployment.md).
 
-Real-time transport, authentication approach, database access tooling, testing tools, and deployment infrastructure will be selected during implementation.
+## Local setup
 
-## Planned system architecture
+Requires Node.js 24+, npm 10+, and a dedicated development PostgreSQL/Neon database.
 
-The application is expected to use a client-server architecture:
+1. Install from the repository root:
 
-```text
-Employees / IT Support / Administrators
-                  |
-                  v
-       React + TypeScript frontend
-             Tailwind CSS
-                  |
-             HTTPS / API
-                  |
-                  v
-    Node.js + Express.js + TypeScript
-    Authentication and authorization
-    Ticket workflows and validation
-                  |
-                  v
-              PostgreSQL
+```powershell
+npm install
+Copy-Item server/.env.example server/.env
+Copy-Item client/.env.example client/.env
 ```
 
-The backend will enforce permissions and validate requests before accessing the database. Planned data areas include users and roles, tickets, assignments, conversations, SLA policies, knowledge articles, and activity history. Real-time conversations and notifications will extend this architecture once their transport is selected.
+2. In Neon, select a **development** database/branch. Copy its pooled connection string into `server/.env` as `DATABASE_URL`. Set a cryptographically random `SESSION_SECRET` (at least 32 characters; preferably 32 random bytes encoded as hex). Generate one locally:
 
-A proposed source layout is shown below. These directories have **not** been created:
-
-```text
-ResolveDesk/
-  client/       # Planned React application
-  server/       # Planned Express API
-  docs/         # Planned architecture and development documentation
-  README.md
-  .gitignore
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-## Installation and setup
+This prints a secret to your local terminal. Store it only in the ignored server environment. Never put it in VITE variables or share its output.
 
-### Current repository
+3. Apply the checked-in additive migrations:
 
-Git is the only requirement for working with the repository at this stage. Once the repository is published, copy its clone URL from GitHub:
-
-```bash
-git clone <repository-clone-url>
-cd ResolveDesk
+```powershell
+npm run db:migrate -w server
 ```
 
-There are no package manifests, application commands, database migrations, or running services yet. Dependency installation and startup instructions will be added when the frontend and backend are scaffolded.
+For schema changes, edit `server/src/db/schema.ts`, run `npm run db:generate -w server`, review SQL, then migrate. The migration ledger prevents duplicate application. Startup never resets or migrates databases automatically. Do not use schema push/reset on shared databases.
 
-### Planned local development prerequisites
+4. For initial **development** accounts, set three different strong passwords (12–128 characters) in ignored `server/.env`:
 
-- A supported Node.js LTS release and a project-selected package manager.
-- PostgreSQL, with its supported version documented during implementation.
-- Local environment configuration for the API, database connection, and authentication.
+- `SEED_ADMIN_PASSWORD`
+- `SEED_AGENT_PASSWORD`
+- `SEED_EMPLOYEE_PASSWORD`
+- Intentionally set `CONFIRM_DEVELOPMENT_SEED=yes`; keep `NODE_ENV=development`.
 
-Exact versions, environment variable names, migration commands, and development scripts will be documented as they are introduced. Future `.env.example` files must contain placeholders only; real credentials belong in ignored local environment files or the deployment environment's secret storage. Browser-delivered configuration must never contain secrets.
+```powershell
+npm run db:seed -w server
+```
 
-## Development workflow
+Accounts: `admin@resolvedesk.example`, `agent@resolvedesk.example`, and `employee@resolvedesk.example`, using the passwords you supplied. The seed adds departments, categories, and an assigned sample ticket with public/internal comments. Repeated runs preserve existing passwords and avoid duplicating the sample ticket. Run one seed process at a time. Remove seed passwords and restore the confirmation to `no` afterward. Production seeding is refused.
 
-- Use `main` as the default branch.
-- Create focused branches for features, fixes, and documentation changes.
-- Use descriptive commits and pull requests that explain the intended behavior.
-- Commit source files and dependency lockfiles; exclude dependencies, generated outputs, and local secrets.
+5. Start both applications:
 
-## Initial roadmap
+```powershell
+npm run dev
+```
 
-- [x] Initialize the local Git repository and project documentation.
-- [ ] Scaffold the frontend and backend applications.
-- [ ] Design the database schema and migration workflow.
-- [ ] Implement authentication and role-based authorization.
-- [ ] Implement the ticket lifecycle and assignment workflows.
-- [ ] Add conversations, notifications, and activity history.
-- [ ] Add SLA monitoring, analytics, and the knowledge base.
-- [ ] Document deployment and operational procedures.
+Open **http://127.0.0.1:5173**. Express uses port 4000; Vite proxies `/api` to Express. Use `127.0.0.1` consistently, matching CLIENT_ORIGIN. Missing server configuration produces a startup error; there is no mock fallback.
 
-## License
+Separate processes: `npm run dev -w server` and `npm run dev -w client`. After building, start the backend with `npm start -w server`.
 
-A license has not been selected. Public repository visibility alone does not grant permission to reuse, modify, or distribute the code.
+## Account provisioning
+
+Administrators create inactive accounts through **Team management**. No password is returned by the API and no invitation email is claimed. For development only, put an existing account's email and a strong password into `PROVISION_EMAIL` / `PROVISION_PASSWORD` in the ignored server environment, then run:
+
+```powershell
+npm run user:password -w server
+```
+
+This hashes the supplied password, activates the account, and revokes its sessions. Remove the provisioning password afterward. Production delivery, identity verification, reset tokens, and initial administrator onboarding must be implemented before rollout.
+
+## Environment variables
+
+| Server variable  | Purpose                                                               |
+| ---------------- | --------------------------------------------------------------------- |
+| DATABASE_URL     | PostgreSQL/Neon connection string; required                           |
+| SESSION_SECRET   | Random HMAC secret, minimum 32 characters; required                   |
+| CLIENT_ORIGIN    | Exact permitted frontend origin, no trailing slash                    |
+| NODE_ENV         | development, test, or production                                      |
+| PORT / HOST      | Listener; defaults 4000 / 127.0.0.1                                   |
+| DB_SSL           | true by default; verified TLS required in production                  |
+| DB_POOL_MAX      | Maximum connections per process, default 5                            |
+| COOKIE_SAME_SITE | lax default; none for genuinely cross-site HTTPS deployment           |
+| TRUST_PROXY      | Trusted reverse-proxy hop count, default 0; configure for actual host |
+
+Frontend: `VITE_API_URL` is a public API base ending in `/api`. Default `/api` uses the dev proxy. Optional `API_PROXY_TARGET` selects the development proxy backend. Server secrets never belong in VITE variables.
+
+## Roles and APIs
+
+| Role          | Access                                                                    |
+| ------------- | ------------------------------------------------------------------------- |
+| Employee      | Own tickets, create request, public replies/activity                      |
+| Agent         | Assigned tickets, allowed statuses, public replies/internal notes         |
+| Administrator | All tickets, assignment/priority/details, accounts/references, statistics |
+
+Endpoints include auth CSRF/login/me/logout; ticket listing/creation/details/edit/status/assignment; comments/activity; users; departments; ticket categories; dashboard analytics; and health. See [API reference](docs/api-roadmap.md).
+
+## Validation and tests
+
+See the [Phase 2 verification record](docs/verification.md) for completed checks and the boundary between isolated PostgreSQL tests and pending Neon validation.
+
+```powershell
+npm test
+npm run test:e2e
+npm run typecheck
+npm run lint
+npm run build
+npm run format:check
+```
+
+Install Chromium once with `npx playwright install chromium`. Stop development servers before browser tests: tests exclusively own ports 5173/4100 and refuse to reuse existing servers. Test credentials are random per run. Vitest uses isolated PGlite databases; Playwright starts the actual Express application with its own isolated PGlite database. A disk-backed test verifies reopening and migration idempotency. PGlite is test-only and excluded from the production server build.
+
+These tests do not validate Neon networking/TLS, multi-connection contention, or deployed cookies/proxies. Those remain deployment checks. Legacy Phase 1 mock-store tests remain regression fixtures; authentication and application server data no longer use that store.
+
+## Roadmap and repository safety
+
+Phase 3: verify Neon and hosted cookie/CORS behavior, implement verified onboarding/recovery, private object storage, notifications, knowledge administration, SLA policies, monitoring, backups, and deployment hardening. Configure shared rate-limit storage before running multiple API replicas.
+
+No automatic deployment, commits, pushes, database wipes, or history rewrites are part of this phase.
+
+Suggested commit: `feat: implement ResolveDesk phase 2 backend and authentication`.

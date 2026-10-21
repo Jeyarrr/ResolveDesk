@@ -1,0 +1,153 @@
+import { sql } from 'drizzle-orm';
+import {
+  pgTable,
+  pgEnum,
+  uuid,
+  text,
+  timestamp,
+  boolean,
+  index,
+  uniqueIndex,
+  bigint,
+  check,
+} from 'drizzle-orm/pg-core';
+export const role = pgEnum('role', ['employee', 'agent', 'admin']);
+export const accountStatus = pgEnum('account_status', ['active', 'inactive', 'suspended']);
+export const priority = pgEnum('priority', ['low', 'medium', 'high', 'critical']);
+export const ticketStatus = pgEnum('ticket_status', [
+  'open',
+  'in_progress',
+  'pending',
+  'resolved',
+  'closed',
+]);
+const id = () => uuid('id').defaultRandom().primaryKey();
+const times = () => ({
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+export const departments = pgTable(
+  'departments',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    description: text('description').notNull().default(''),
+    active: boolean('active').notNull().default(true),
+    ...times(),
+  },
+  (t) => [uniqueIndex('departments_name_unique').on(sql`lower(${t.name})`)],
+);
+export const categories = pgTable(
+  'ticket_categories',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    description: text('description').notNull().default(''),
+    active: boolean('active').notNull().default(true),
+    ...times(),
+  },
+  (t) => [uniqueIndex('categories_name_unique').on(sql`lower(${t.name})`)],
+);
+export const users = pgTable(
+  'users',
+  {
+    id: id(),
+    fullName: text('full_name').notNull(),
+    email: text('email').notNull(),
+    passwordHash: text('password_hash'),
+    role: role('role').notNull().default('employee'),
+    accountStatus: accountStatus('account_status').notNull().default('inactive'),
+    departmentId: uuid('department_id').references(() => departments.id, { onDelete: 'restrict' }),
+    lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    ...times(),
+  },
+  (t) => [
+    uniqueIndex('users_email_unique').on(sql`lower(${t.email})`),
+    index('users_department_idx').on(t.departmentId),
+    index('users_role_status_idx').on(t.role, t.accountStatus),
+  ],
+);
+export const tickets = pgTable(
+  'tickets',
+  {
+    id: id(),
+    ticketNumber: bigint('ticket_number', { mode: 'number' })
+      .generatedAlwaysAsIdentity()
+      .notNull()
+      .unique(),
+    subject: text('subject').notNull(),
+    description: text('description').notNull(),
+    categoryId: uuid('category_id')
+      .notNull()
+      .references(() => categories.id, { onDelete: 'restrict' }),
+    priority: priority('priority').notNull().default('medium'),
+    status: ticketStatus('status').notNull().default('open'),
+    requesterId: uuid('requester_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    assignedAgentId: uuid('assigned_agent_id').references(() => users.id, { onDelete: 'restrict' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    ...times(),
+  },
+  (t) => [
+    index('tickets_requester_updated_idx').on(t.requesterId, t.updatedAt),
+    index('tickets_agent_updated_idx').on(t.assignedAgentId, t.updatedAt),
+    index('tickets_status_priority_idx').on(t.status, t.priority),
+    index('tickets_category_idx').on(t.categoryId),
+    index('tickets_created_idx').on(t.createdAt),
+    check(
+      'ticket_resolution_consistency',
+      sql`((${t.status} IN ('resolved','closed')) = (${t.resolvedAt} IS NOT NULL)) AND ((${t.status} = 'closed') = (${t.closedAt} IS NOT NULL))`,
+    ),
+  ],
+);
+export const comments = pgTable(
+  'ticket_comments',
+  {
+    id: id(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    message: text('message').notNull(),
+    isInternal: boolean('is_internal').notNull().default(false),
+    ...times(),
+  },
+  (t) => [index('comments_ticket_created_idx').on(t.ticketId, t.createdAt)],
+);
+export const activity = pgTable(
+  'ticket_activity',
+  {
+    id: id(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    actorId: uuid('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    action: text('action').notNull(),
+    oldValue: text('old_value'),
+    newValue: text('new_value'),
+    isInternal: boolean('is_internal').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index('activity_ticket_created_idx').on(t.ticketId, t.createdAt)],
+);
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: id(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    tokenHash: text('token_hash').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  },
+  (t) => [index('sessions_user_idx').on(t.userId), index('sessions_expiry_idx').on(t.expiresAt)],
+);
+export type Actor = typeof users.$inferSelect;
