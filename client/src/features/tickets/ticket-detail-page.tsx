@@ -9,7 +9,6 @@ import {
   displayPerson,
   type ApiTicket,
   type ApiUser,
-  type ApiStatus,
   type Page,
   type Comment,
   type Activity,
@@ -19,13 +18,7 @@ import { formatDate } from '../../lib/utils';
 import { Avatar, Badge, Card, InlineMessage } from '../../components/shared/primitives';
 import { QueryState } from '../../components/shared/query-state';
 import { Button } from '../../components/ui/button';
-const transitions: Record<ApiStatus, ApiStatus[]> = {
-  open: ['in_progress', 'pending'],
-  in_progress: ['pending', 'resolved'],
-  pending: ['in_progress', 'resolved'],
-  resolved: ['closed', 'open'],
-  closed: ['open'],
-};
+import { TicketLifecycle } from './ticket-lifecycle';
 export default function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useApp();
@@ -76,6 +69,12 @@ export default function TicketDetailPage() {
       {mutation.error && <InlineMessage error>{mutation.error.message}</InlineMessage>}
       <div className="form-layout mt-6">
         <div className="space-y-5">
+          <TicketLifecycle
+            ticket={t}
+            busy={mutation.isPending}
+            error={mutation.error?.message}
+            update={update}
+          />
           <Card title="Description">
             <p className="whitespace-pre-wrap break-words px-6 pb-6 text-sm leading-7 text-muted-foreground">
               {t.description}
@@ -216,6 +215,9 @@ export default function TicketDetailPage() {
                     <span className="timeline-dot" />
                     <div>
                       <strong>{a.action}</strong>
+                      {a.explanation && (
+                        <p className="whitespace-pre-wrap break-words">{a.explanation}</p>
+                      )}
                       {a.newValue && (
                         <p className="break-all">
                           {a.oldValue ? a.oldValue + ' → ' : ''}
@@ -282,15 +284,20 @@ export default function TicketDetailPage() {
               <div>
                 <dt>Status</dt>
                 <dd>
-                  {manageable ? (
+                  {(t.lifecycleActions?.statusTransitions.length ?? 0) > 0 ? (
                     <select
                       aria-label="Ticket status"
                       className="select w-full"
                       value={t.status}
                       disabled={mutation.isPending}
-                      onChange={(e) => void update('/status', { status: e.target.value })}
+                      onChange={(e) =>
+                        void update('/status', {
+                          status: e.target.value,
+                          expectedVersion: t.lifecycleVersion,
+                        })
+                      }
                     >
-                      {[t.status, ...transitions[t.status]].map((s) => (
+                      {[t.status, ...(t.lifecycleActions?.statusTransitions ?? [])].map((s) => (
                         <option key={s} value={s}>
                           {statusLabels[s]}
                         </option>

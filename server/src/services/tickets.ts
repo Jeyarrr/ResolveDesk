@@ -4,14 +4,7 @@ import type { Database, Executor } from '../db/connection.js';
 import { activity, categories, comments, tickets, users, type Actor } from '../db/schema.js';
 import { AppError } from '../middleware/errors.js';
 import { permittedTicket } from '../repositories/tickets.js';
-import type { commentInput, ticketInput, ticketPatch, statuses } from '../validation/schemas.js';
-export const transitions: Record<z.infer<typeof statuses>, z.infer<typeof statuses>[]> = {
-  open: ['in_progress', 'pending'],
-  in_progress: ['pending', 'resolved'],
-  pending: ['in_progress', 'resolved'],
-  resolved: ['closed', 'open'],
-  closed: ['open'],
-};
+import type { commentInput, ticketInput, ticketPatch } from '../validation/schemas.js';
 async function categoryExists(db: Executor, id: string) {
   const [row] = await db
     .select()
@@ -66,40 +59,6 @@ export function ticketService(db: Database) {
           if (input[key] !== ticket[key])
             await recordActivity(tx, actor, id, `${key} updated`, ticket[key], input[key]);
         }
-        return saved!;
-      });
-    },
-    async status(actor: Actor, id: string, status: z.infer<typeof statuses>) {
-      return db.transaction(async (tx) => {
-        const ticket = await permittedTicket(tx, actor, id, true);
-        if (actor.role === 'employee')
-          throw new AppError(403, 'Only support staff can change status');
-        if (!transitions[ticket.status].includes(status))
-          throw new AppError(409, `Cannot change ${ticket.status} to ${status}`);
-        const now = new Date();
-        const [saved] = await tx
-          .update(tickets)
-          .set({
-            status,
-            updatedAt: now,
-            resolvedAt:
-              status === 'resolved' ? now : status === 'closed' ? ticket.resolvedAt : null,
-            closedAt: status === 'closed' ? now : null,
-          })
-          .where(eq(tickets.id, id))
-          .returning();
-        await recordActivity(
-          tx,
-          actor,
-          id,
-          status === 'open'
-            ? 'Ticket reopened'
-            : status === 'resolved'
-              ? 'Ticket resolved'
-              : 'Status changed',
-          ticket.status,
-          status,
-        );
         return saved!;
       });
     },

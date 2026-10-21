@@ -25,7 +25,9 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 
 ## Development status
 
-**Phase 2 implemented; Neon and production verification pending.** The React interface connects to Express APIs and PostgreSQL. Automated integration checks use isolated PostgreSQL through PGlite and never connect to a shared database. A real Neon connection, production onboarding, and production verification are still required before deployment.
+**Phase 3.1: Advanced Ticket Lifecycle & Resolution Management.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
+
+Phase 3.1 adds structured resolution summaries, employee confirmation, reasoned reopening, audited administrator closure/reopening, lifecycle progress, and version checks for conflicting requests. See the [lifecycle rules and walkthrough](docs/ticket-lifecycle.md).
 
 ## Objectives and functionality
 
@@ -34,6 +36,7 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 - Administrators manage organizational tickets, assignments, priorities, accounts, departments, and categories.
 - Database sessions, Argon2id password hashing, CSRF protection, role checks, and object-level authorization.
 - Persistent conversations and transactional ticket activity history.
+- Resolution summaries, resolving and closing actors, employee confirmation, and complete reopening history.
 - Server pagination, search, category/priority/status filtering, and sorting.
 - Role-scoped dashboards and database reports, trends, status and priority distributions.
 - Responsive navigation, dark/light themes, keyboard navigation, and sample knowledge guides.
@@ -42,9 +45,9 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 
 ## Stack and architecture
 
-React 19 · TypeScript · Vite · Tailwind CSS 4 · Radix/shadcn-style UI · TanStack Query · React Hook Form · Zod · Express 5 · Drizzle ORM/Kit · PostgreSQL (Neon) · node-postgres · Argon2id.
+React 19 · TypeScript · Vite · Tailwind CSS 4 · Radix/shadcn-style UI · TanStack Query · React Hook Form · Zod · Express 5 · Drizzle ORM/Kit · PostgreSQL (local) · node-postgres · Argon2id.
 
-Browser → React/TanStack Query → credentialed Express REST API → permission-aware services/repositories → bounded pg pool → Neon PostgreSQL.
+Browser → React/TanStack Query → credentialed Express REST API → permission-aware services/repositories → bounded pg pool → local PostgreSQL.
 
 - `client/src`: UI, API client, query hooks, session provider, feature pages.
 - `server/src`: configuration, routes/controllers, services, repositories, middleware, validation, database schema/scripts.
@@ -53,17 +56,17 @@ Browser → React/TanStack Query → credentialed Express REST API → permissio
 
 ## Local setup
 
-Requires Node.js 24+, npm 10+, and a dedicated development PostgreSQL/Neon database.
+Requires Node.js 24+, npm 10+, and local PostgreSQL. Existing installations should keep their working `server/.env` and database; no reset or reseeding is needed for Phase 3.1.
 
 1. Install from the repository root:
 
 ```powershell
 npm install
-Copy-Item server/.env.example server/.env
-Copy-Item client/.env.example client/.env
+if (!(Test-Path server/.env)) { Copy-Item server/.env.example server/.env }
+if (!(Test-Path client/.env)) { Copy-Item client/.env.example client/.env }
 ```
 
-2. In Neon, select a **development** database/branch. Copy its pooled connection string into `server/.env` as `DATABASE_URL`. Set a cryptographically random `SESSION_SECRET` (at least 32 characters; preferably 32 random bytes encoded as hex). Generate one locally:
+2. For a new installation, create a dedicated local PostgreSQL database using pgAdmin and set its connection string in `server/.env` as `DATABASE_URL`. Use `DB_SSL=false` for the current local server. Keep an existing connection and session secret unchanged. If configuring a new instance, generate a `SESSION_SECRET` of at least 32 random bytes:
 
 ```powershell
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
@@ -78,6 +81,8 @@ npm run db:migrate -w server
 ```
 
 For schema changes, edit `server/src/db/schema.ts`, run `npm run db:generate -w server`, review SQL, then migrate. The migration ledger prevents duplicate application. Startup never resets or migrates databases automatically. Do not use schema push/reset on shared databases.
+
+Phase 3.1 migration `0002_sticky_garia.sql` adds resolution metadata and lifecycle versions to tickets, and explanations/version uniqueness to existing activity records. It preserves existing users, credentials, sessions, tickets, and history. No new table or status is introduced. Review migrations before applying them; review/approval is required for potentially destructive changes.
 
 4. For initial **development** accounts, set three different strong passwords (12–128 characters) in ignored `server/.env`:
 
@@ -104,7 +109,7 @@ Open **http://127.0.0.1:5173**. Express uses port 4000; Vite proxies `/api` to E
 
 The root development launcher starts Vite and tsx directly with Node, avoiding nested Windows npm batch files and their `Terminate batch job (Y/N)?` prompts. Press Ctrl+C to stop both processes. It checks required configuration before launching either app. If PowerShell itself resolves `npm` to `npm.cmd`, use `npm.ps1 run dev` to avoid the outer batch wrapper as well.
 
-For local PostgreSQL, create a dedicated `resolvedesk` database and use its connection string in `server/.env`, with `DB_SSL=false` for a local server without TLS. Do not run application migrations in PostgreSQL's default `postgres` maintenance database. Neon connections continue to require `DB_SSL=true`.
+The configured local database uses `DB_SSL=false`. Do not run application migrations in PostgreSQL's default `postgres` maintenance database. Connection settings remain environment-based for a future hosting migration.
 
 Separate processes: `npm run server` (backend only) and `npm run dev -w client` (frontend only). The backend also supports `npm run dev -w server`. After building, start the backend with `npm start -w server`.
 
@@ -120,51 +125,53 @@ This hashes the supplied password, activates the account, and revokes its sessio
 
 ## Environment variables
 
-| Server variable  | Purpose                                                               |
-| ---------------- | --------------------------------------------------------------------- |
-| DATABASE_URL     | PostgreSQL/Neon connection string; required                           |
-| SESSION_SECRET   | Random HMAC secret, minimum 32 characters; required                   |
-| CLIENT_ORIGIN    | Exact permitted frontend origin, no trailing slash                    |
-| NODE_ENV         | development, test, or production                                      |
-| PORT / HOST      | Listener; defaults 4000 / 127.0.0.1                                   |
-| DB_SSL           | true by default; verified TLS required in production                  |
-| DB_POOL_MAX      | Maximum connections per process, default 5                            |
-| COOKIE_SAME_SITE | lax default; none for genuinely cross-site HTTPS deployment           |
-| TRUST_PROXY      | Trusted reverse-proxy hop count, default 0; configure for actual host |
+| Server variable  | Purpose                                                                 |
+| ---------------- | ----------------------------------------------------------------------- |
+| DATABASE_URL     | Existing local PostgreSQL connection string; required                   |
+| SESSION_SECRET   | Random HMAC secret, minimum 32 characters; required                     |
+| CLIENT_ORIGIN    | Exact permitted frontend origin, no trailing slash                      |
+| NODE_ENV         | development, test, or production                                        |
+| PORT / HOST      | Listener; defaults 4000 / 127.0.0.1                                     |
+| DB_SSL           | false for the current local server; verified TLS required in production |
+| DB_POOL_MAX      | Maximum connections per process, default 5                              |
+| COOKIE_SAME_SITE | lax default; none for genuinely cross-site HTTPS deployment             |
+| TRUST_PROXY      | Trusted reverse-proxy hop count, default 0; configure for actual host   |
 
 Frontend: `VITE_API_URL` is a public API base ending in `/api`. Default `/api` uses the dev proxy. Optional `API_PROXY_TARGET` selects the development proxy backend. Server secrets never belong in VITE variables.
 
 ## Roles and APIs
 
-| Role          | Access                                                                    |
-| ------------- | ------------------------------------------------------------------------- |
-| Employee      | Own tickets, create request, public replies/activity                      |
-| Agent         | Assigned tickets, allowed statuses, public replies/internal notes         |
-| Administrator | All tickets, assignment/priority/details, accounts/references, statistics |
+| Role          | Access                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Employee      | Own tickets, public replies, confirm resolution, reopen resolved requests                   |
+| Agent         | Assigned tickets, active statuses, resolution summaries, reasoned reopening, internal notes |
+| Administrator | All tickets, resolution, audited closure/closed-ticket reopening, existing admin controls   |
 
 Endpoints include auth CSRF/login/me/logout; ticket listing/creation/details/edit/status/assignment; comments/activity; users; departments; ticket categories; dashboard analytics; and health. See [API reference](docs/api-roadmap.md).
 
 ## Validation and tests
 
-See the [Phase 2 verification record](docs/verification.md) for completed checks and the boundary between isolated PostgreSQL tests and pending Neon validation.
+See the [verification record](docs/verification.md) and [lifecycle rules](docs/ticket-lifecycle.md). Use isolated databases for all automated writes.
 
 ```powershell
 npm test
 npm run test:e2e
+npm run test:postgres
+npm run test:e2e:postgres
 npm run typecheck
 npm run lint
 npm run build
 npm run format:check
 ```
 
-Install Chromium once with `npx playwright install chromium`. Stop development servers before browser tests: tests exclusively own ports 5173/4100 and refuse to reuse existing servers. Test credentials are random per run. Vitest uses isolated PGlite databases; Playwright starts the actual Express application with its own isolated PGlite database. A disk-backed test verifies reopening and migration idempotency. PGlite is test-only and excluded from the production server build.
+Install Chromium once with `npx playwright install chromium`. Browser tests exclusively own ports 5174/4101 and refuse to reuse existing servers; normal development can remain on 5173/4000. Test credentials are random per run. Default tests use isolated PGlite PostgreSQL, excluded from production builds. `test:postgres` and `test:e2e:postgres` create separate local `resolvedesk_test_*` databases using the configured local PostgreSQL account (which needs CREATEDB permission). They never reset or seed the application database. Test databases are retained in pgAdmin for inspection; the commands print their names, never credentials. Native tests exercise separate connections, locking, duplicate submissions, rollback, permissions, persistence, and real browser workflows.
 
-These tests do not validate Neon networking/TLS, multi-connection contention, or deployed cookies/proxies. Those remain deployment checks. Legacy Phase 1 mock-store tests remain regression fixtures; authentication and application server data no longer use that store.
+These tests validate local PostgreSQL multi-connection contention. Hosted networking/TLS and deployed cookies/proxies remain future deployment checks. Legacy Phase 1 mock-store tests remain regression fixtures; authentication and application server data no longer use that store.
 
 ## Roadmap and repository safety
 
-Phase 3: verify Neon and hosted cookie/CORS behavior, implement verified onboarding/recovery, private object storage, notifications, knowledge administration, SLA policies, monitoring, backups, and deployment hardening. Configure shared rate-limit storage before running multiple API replicas.
+Next is Phase 3.2: advanced reassignment, escalation, and workload balancing. Phase 3.3 covers attachments; Phase 3.4 covers advanced conversations; Phase 4 covers real-time notifications and SLA automation. Future deployment work includes hosted PostgreSQL, onboarding/recovery, backups, and production hardening. These are outside Phase 3.1.
 
 No automatic deployment, commits, pushes, database wipes, or history rewrites are part of this phase.
 
-Suggested commit: `feat: implement ResolveDesk phase 2 backend and authentication`.
+Suggested commit: `feat: implement advanced ticket lifecycle and resolution management`.

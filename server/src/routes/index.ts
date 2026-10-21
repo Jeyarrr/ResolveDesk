@@ -67,6 +67,10 @@ export function apiRouter(db: Database, config: Config) {
   router.get('/tickets/:id', c.ticket);
   router.patch('/tickets/:id', c.patchTicket);
   router.patch('/tickets/:id/status', c.status);
+  router.patch('/tickets/:id/resolve', c.resolve);
+  router.patch('/tickets/:id/confirm-resolution', c.confirmResolution);
+  router.patch('/tickets/:id/close', c.close);
+  router.patch('/tickets/:id/reopen', c.reopen);
   router.patch('/tickets/:id/assign', requireRole('admin'), c.assign);
   router.get('/tickets/:id/comments', c.comments);
   router.post('/tickets/:id/comments', c.comment);

@@ -5,6 +5,7 @@ import type { Database } from '../db/connection.js';
 import { tickets, users } from '../db/schema.js';
 import * as input from '../validation/schemas.js';
 import { ticketService } from '../services/tickets.js';
+import { lifecycleService, lifecycleActions } from '../services/lifecycle.js';
 import { adminService } from '../services/admin.js';
 import { analytics } from '../services/analytics.js';
 import { profile } from '../repositories/users.js';
@@ -18,7 +19,8 @@ import {
 import { AppError } from '../middleware/errors.js';
 export function controllers(db: Database) {
   const service = ticketService(db),
-    admin = adminService(db);
+    admin = adminService(db),
+    lifecycle = lifecycleService(db);
   const wrap =
     (fn: (req: Parameters<RequestHandler>[0]) => Promise<unknown>, status = 200): RequestHandler =>
     async (req, res) => {
@@ -30,19 +32,17 @@ export function controllers(db: Database) {
     ticket: wrap(async (req) => {
       const [row] = await ticketRows(db, and(eq(tickets.id, id(req)), scope(req.actor)));
       if (!row) throw new AppError(404, 'Ticket not found');
-      return row;
+      return { ...row, lifecycleActions: lifecycleActions(req.actor, row) };
     }),
     createTicket: wrap((req) => service.create(req.actor, input.ticketInput.parse(req.body)), 201),
     patchTicket: wrap((req) =>
       service.patch(req.actor, id(req), input.ticketPatch.parse(req.body)),
     ),
-    status: wrap((req) =>
-      service.status(
-        req.actor,
-        id(req),
-        z.object({ status: input.statuses }).strict().parse(req.body).status,
-      ),
-    ),
+    status: wrap((req) => lifecycle.status(req.actor, id(req), req.body)),
+    resolve: wrap((req) => lifecycle.resolve(req.actor, id(req), req.body)),
+    confirmResolution: wrap((req) => lifecycle.confirm(req.actor, id(req), req.body)),
+    close: wrap((req) => lifecycle.close(req.actor, id(req), req.body)),
+    reopen: wrap((req) => lifecycle.reopen(req.actor, id(req), req.body)),
     assign: wrap((req) =>
       service.assign(
         req.actor,

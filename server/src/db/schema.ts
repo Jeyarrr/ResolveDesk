@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   bigint,
   check,
+  integer,
 } from 'drizzle-orm/pg-core';
 export const role = pgEnum('role', ['employee', 'agent', 'admin']);
 export const accountStatus = pgEnum('account_status', ['active', 'inactive', 'suspended']);
@@ -94,6 +95,10 @@ export const tickets = pgTable(
     assignedAgentId: uuid('assigned_agent_id').references(() => users.id, { onDelete: 'restrict' }),
     resolvedAt: timestamp('resolved_at', { withTimezone: true }),
     closedAt: timestamp('closed_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'restrict' }),
+    resolutionSummary: text('resolution_summary'),
+    closedBy: uuid('closed_by').references(() => users.id, { onDelete: 'restrict' }),
+    lifecycleVersion: integer('lifecycle_version').notNull().default(0),
     ...times(),
   },
   (t) => [
@@ -102,6 +107,11 @@ export const tickets = pgTable(
     index('tickets_status_priority_idx').on(t.status, t.priority),
     index('tickets_category_idx').on(t.categoryId),
     index('tickets_created_idx').on(t.createdAt),
+    check('ticket_lifecycle_version_nonnegative', sql`${t.lifecycleVersion} >= 0`),
+    check(
+      'ticket_resolution_details_consistency',
+      sql`((${t.resolvedBy} IS NULL) = (${t.resolutionSummary} IS NULL)) AND (${t.resolvedBy} IS NULL OR (${t.status} IN ('resolved','closed') AND length(trim(${t.resolutionSummary})) BETWEEN 20 AND 5000)) AND (${t.closedBy} IS NULL OR ${t.status} = 'closed')`,
+    ),
     check(
       'ticket_resolution_consistency',
       sql`((${t.status} IN ('resolved','closed')) = (${t.resolvedAt} IS NOT NULL)) AND ((${t.status} = 'closed') = (${t.closedAt} IS NOT NULL))`,
@@ -137,10 +147,15 @@ export const activity = pgTable(
     action: text('action').notNull(),
     oldValue: text('old_value'),
     newValue: text('new_value'),
+    explanation: text('explanation'),
+    lifecycleVersion: integer('lifecycle_version'),
     isInternal: boolean('is_internal').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   },
-  (t) => [index('activity_ticket_created_idx').on(t.ticketId, t.createdAt)],
+  (t) => [
+    index('activity_ticket_created_idx').on(t.ticketId, t.createdAt),
+    uniqueIndex('activity_ticket_lifecycle_version_unique').on(t.ticketId, t.lifecycleVersion),
+  ],
 );
 export const sessions = pgTable(
   'sessions',

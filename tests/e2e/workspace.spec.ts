@@ -24,12 +24,13 @@ test('real login, recovery unavailable, refresh, logout and route guards', async
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Welcome back, Mon' })).toBeVisible();
   await page.goto('/team');
-  await expect(page).toHaveURL('http://127.0.0.1:5173/');
+  await expect(page).toHaveURL('http://127.0.0.1:5174/');
   await logout(page);
   await page.goto('/tickets/mine');
   await expect(page).toHaveURL(/login$/);
 });
 test('database ticket workflow across employee, admin and agent sessions', async ({ page }) => {
+  test.setTimeout(120000);
   await login(page, 'employee');
   await page.goto('/tickets/new');
   await page.getByRole('button', { name: 'Submit ticket' }).click();
@@ -75,8 +76,19 @@ test('database ticket workflow across employee, admin and agent sessions', async
   await expect(
     page.getByRole('article').getByText('Updated the VPN configuration and verified connectivity.'),
   ).toBeVisible();
-  await page.getByLabel('Ticket status', { exact: true }).selectOption('resolved');
-  await expect(page.getByLabel('Ticket status', { exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Mark as resolved', exact: true }).click();
+  let dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Resolve ticket', exact: true }).click();
+  await expect(dialog.getByText('Enter at least 20 characters.')).toBeVisible();
+  await dialog
+    .getByLabel('Resolution summary')
+    .fill('Replaced the VPN configuration and verified stable connectivity.');
+  await dialog.getByRole('button', { name: 'Resolve ticket', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('Awaiting requester confirmation.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirm resolution', exact: true })).toHaveCount(
+    0,
+  );
   await logout(page);
   await login(page, 'employee');
   await page.goto(url);
@@ -85,7 +97,62 @@ test('database ticket workflow across employee, admin and agent sessions', async
   ).toBeVisible();
   await expect(page.getByText('Private agent investigation')).toHaveCount(0);
   await expect(page.getByLabel('Ticket status', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Ticket resolved', { exact: true })).toBeVisible();
+  await expect(page.getByText('Resolution submitted', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Mark as resolved', exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Issue still exists', exact: true }).click();
+  dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Reopen ticket', exact: true }).click();
+  await expect(dialog.getByText('Enter at least 10 characters.')).toBeVisible();
+  await dialog
+    .getByLabel('Reopening reason')
+    .fill('The VPN still disconnects when I start a video meeting.');
+  await dialog.getByRole('button', { name: 'Reopen ticket', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByText('Ticket reopened', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByText('The VPN still disconnects when I start a video meeting.', { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('Replaced the VPN configuration and verified stable connectivity.', {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator('[aria-current="step"]')).toContainText('Open');
+  await logout(page);
+  await login(page, 'agent');
+  await page.goto(url);
+  await page.getByLabel('Ticket status', { exact: true }).selectOption('in_progress');
+  await page.getByRole('button', { name: 'Mark as resolved', exact: true }).click();
+  dialog = page.getByRole('dialog');
+  await dialog
+    .getByLabel('Resolution summary')
+    .fill('Replaced the faulty adapter and confirmed the VPN remains stable during calls.');
+  await dialog.getByRole('button', { name: 'Resolve ticket', exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await logout(page);
+  await login(page, 'employee');
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Confirm resolution', exact: true }).click();
+  dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(page.getByText('Awaiting requester confirmation.')).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm resolution', exact: true }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Confirm resolution', exact: true })
+    .click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByText('Resolution confirmed and ticket closed', { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Issue still exists', exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.locator('[aria-current="step"]')).toContainText('Closed');
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test('admin account creation and reference management persist', async ({ page }) => {
   await login(page);

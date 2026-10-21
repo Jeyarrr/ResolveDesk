@@ -11,22 +11,22 @@ export default defineConfig({
   expect: { timeout: 10000 },
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: 'http://127.0.0.1:5174',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: [
     {
-      command: 'npm run dev -w client',
-      url: 'http://127.0.0.1:5173',
+      command: 'npm run dev -w client -- --port 5174 --strictPort',
+      url: 'http://127.0.0.1:5174',
       reuseExistingServer: false,
-      env: { API_PROXY_TARGET: 'http://127.0.0.1:4100' },
+      env: { API_PROXY_TARGET: 'http://127.0.0.1:4101' },
       timeout: 60000,
     },
     {
       command: 'npx tsx server/src/test/browser-server.ts',
-      url: 'http://127.0.0.1:4100/api/health',
+      url: 'http://127.0.0.1:4101/api/health',
       reuseExistingServer: false,
       timeout: 60000,
     },

@@ -23,6 +23,8 @@ export async function permittedTicket(db: Executor, actor: Actor, id: string, lo
 }
 const assignee = alias(users, 'assignee');
 const requester = alias(users, 'requester');
+const resolver = alias(users, 'resolver');
+const closer = alias(users, 'closer');
 const person = (u: { id: AnyPgColumn; fullName: AnyPgColumn }) => sql<{
   id: string;
   name: string;
@@ -46,6 +48,12 @@ export function ticketRows(db: Executor, where: SQL | undefined) {
       updatedAt: tickets.updatedAt,
       resolvedAt: tickets.resolvedAt,
       closedAt: tickets.closedAt,
+      resolvedBy: tickets.resolvedBy,
+      resolutionSummary: tickets.resolutionSummary,
+      closedBy: tickets.closedBy,
+      lifecycleVersion: tickets.lifecycleVersion,
+      resolver: person(resolver),
+      closer: person(closer),
       requester: person(requester),
       assignee: person(assignee),
     })
@@ -53,6 +61,8 @@ export function ticketRows(db: Executor, where: SQL | undefined) {
     .innerJoin(categories, eq(categories.id, tickets.categoryId))
     .innerJoin(requester, eq(requester.id, tickets.requesterId))
     .leftJoin(assignee, eq(assignee.id, tickets.assignedAgentId))
+    .leftJoin(resolver, eq(resolver.id, tickets.resolvedBy))
+    .leftJoin(closer, eq(closer.id, tickets.closedBy))
     .where(where);
 }
 export async function listTickets(db: Executor, actor: Actor, q: z.infer<typeof ticketQuery>) {
@@ -122,6 +132,8 @@ export async function ticketActivity(db: Executor, actor: Actor, id: string) {
       action: activity.action,
       oldValue: activity.oldValue,
       newValue: activity.newValue,
+      explanation: activity.explanation,
+      lifecycleVersion: activity.lifecycleVersion,
       createdAt: activity.createdAt,
       actor: person(users),
     })
@@ -135,5 +147,5 @@ export async function ticketActivity(db: Executor, actor: Actor, id: string) {
         actor.role === 'employee' ? eq(activity.isInternal, false) : undefined,
       ),
     )
-    .orderBy(asc(activity.createdAt), asc(activity.id));
+    .orderBy(asc(activity.createdAt), asc(activity.lifecycleVersion), asc(activity.id));
 }

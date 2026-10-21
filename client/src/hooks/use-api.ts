@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../services/api';
+import { api, ApiError } from '../services/api';
 export function useApi<T>(path: string, enabled = true, preservePage = false) {
   return useQuery({
     queryKey: ['protected', path],
@@ -22,6 +22,10 @@ export function useApiMutation<T = unknown>() {
     }) => api<T>(path, { method, body }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['protected'] });
+    },
+    onError: async (error) => {
+      if (error instanceof ApiError && error.status === 409)
+        await client.invalidateQueries({ queryKey: ['protected'] });
     },
   });
 }

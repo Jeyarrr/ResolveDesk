@@ -1,5 +1,7 @@
 # Deployment preparation (not deployed)
 
+This document is a future deployment reference. Current development runs on the existing local PostgreSQL database through pgAdmin 4 with `DB_SSL=false`. Phase 3.1 does not configure Neon, change the local connection, synchronize data, or deploy anything.
+
 ## Frontend: Vercel
 
 Use client as the Vercel root directory with the Vite framework preset. Install the npm workspace dependencies from the repository; build with npm run build -w client from the repository root (or npm run build from client). Output is client/dist (dist relative to client). client/vercel.json rewrites client routes to index.html.

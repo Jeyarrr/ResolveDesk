@@ -284,8 +284,23 @@ describe('ticket lifecycle and object authorization', () => {
         )
       ).status,
     ).toBe(403);
-    for (const status of ['in_progress', 'resolved', 'closed', 'open']) {
-      const r = await mutate(agent, '/tickets/' + ticketId + '/status', { status }, 'patch');
+    for (const [client, path, body, status] of [
+      [agent, '/status', { status: 'in_progress', expectedVersion: 0 }, 'in_progress'],
+      [
+        agent,
+        '/resolve',
+        { summary: 'Updated the VPN configuration and verified connectivity.', expectedVersion: 1 },
+        'resolved',
+      ],
+      [employee, '/confirm-resolution', { expectedVersion: 2 }, 'closed'],
+      [
+        admin,
+        '/reopen',
+        { reason: 'A related connection problem requires investigation.', expectedVersion: 3 },
+        'open',
+      ],
+    ] as const) {
+      const r = await mutate(client, '/tickets/' + ticketId + path, body, 'patch');
       expect(r.status).toBe(200);
       expect(Boolean(r.body.data.resolvedAt)).toBe(['resolved', 'closed'].includes(status));
       expect(Boolean(r.body.data.closedAt)).toBe(status === 'closed');

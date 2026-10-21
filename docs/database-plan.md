@@ -2,6 +2,8 @@
 
 PostgreSQL is the source of truth. Drizzle definitions are in server/src/db/schema.ts; generated SQL and snapshots are in server/drizzle.
 
+The current runtime uses local PostgreSQL managed in pgAdmin 4, with the existing `DATABASE_URL` and `DB_SSL=false`. No cloud synchronization or Neon configuration is part of Phase 3.1.
+
 | Table             | Fields and relationships                                                                                                                                       |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | departments       | UUID, name, description, active, created/updated timestamps                                                                                                    |
@@ -28,10 +30,21 @@ All timestamps use PostgreSQL timestamptz and APIs serialize ISO UTC dates. UUID
 
 ## Migrations
 
+Phase 3.1 migration `0002_sticky_garia.sql` is additive:
+
+- `tickets.resolved_by` and `tickets.closed_by`: nullable user foreign keys with restricted deletion.
+- `tickets.resolution_summary`: nullable public summary for the current resolution attempt.
+- `tickets.lifecycle_version`: nonnegative integer, default 0.
+- `ticket_activity.explanation`: nullable public resolution summary or closure/reopening reason for lifecycle events.
+- `ticket_activity.lifecycle_version`: nullable integer with a unique `(ticket_id, lifecycle_version)` index. Historical rows retain null versions.
+- Consistency checks require summary/actor pairs and valid lifecycle state for new resolution metadata. Existing resolved/closed rows without structured notes remain valid.
+
+No table, status, user, credential, session, ticket, or prior history is removed or recreated. Reopening clears only the current ticket's resolution/closure fields; prior summaries remain in activity events. Original creation dates and assignments remain unchanged.
+
 From the root, run npm run db:generate -w server after schema edits, review SQL, and run npm run db:migrate -w server. Generation requires no credentials. Application requires the server environment. The migration ledger prevents duplicate applications. No automatic reset, deletion, or seed occurs at startup.
 
 Development seeds are explicit, guarded, and preserve existing passwords. Accounts without password_hash cannot authenticate or be activated through the API. Accounts and reference records are suspended/archived instead of hard-deleted.
 
 ## Validation boundary
 
-Generated SQL is applied in isolated PostgreSQL tests, including unique/foreign-key checks, transactional rollback, repeat migration, and disk reopen persistence. Neon connectivity/TLS and concurrent multi-connection locking require a dedicated Neon validation pass.
+Generated SQL is applied in isolated PostgreSQL tests. Default tests use PGlite for fast regression and disk reopen checks. `npm run test:postgres` creates a separate local `resolvedesk_test_*` database for native PostgreSQL tests, including real pooled-connection contention, rollback, permissions, and lifecycle persistence. `npm run test:e2e:postgres` uses another separate local test database for browser workflows. Both retain their databases for inspection and print their names without credentials. Hosted networking/TLS and deployment behavior remain future checks.

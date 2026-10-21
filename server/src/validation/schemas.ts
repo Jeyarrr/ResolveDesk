@@ -2,6 +2,27 @@ import { z } from 'zod';
 export const uuid = z.uuid();
 export const roles = z.enum(['employee', 'agent', 'admin']);
 export const statuses = z.enum(['open', 'in_progress', 'pending', 'resolved', 'closed']);
+export const lifecycleVersion = z.number().int().min(0).max(2147483646);
+export const statusInput = z
+  .object({ status: statuses, expectedVersion: lifecycleVersion.optional() })
+  .strict();
+export const resolutionInput = z
+  .object({
+    expectedVersion: lifecycleVersion,
+    summary: z
+      .string()
+      .trim()
+      .min(20, 'Describe the resolution in at least 20 characters.')
+      .max(5000),
+  })
+  .strict();
+export const confirmationInput = z.object({ expectedVersion: lifecycleVersion }).strict();
+export const reasonInput = z
+  .object({
+    expectedVersion: lifecycleVersion,
+    reason: z.string().trim().min(10, 'Give a reason of at least 10 characters.').max(2000),
+  })
+  .strict();
 export const priorities = z.enum(['low', 'medium', 'high', 'critical']);
 export const email = z
   .email()

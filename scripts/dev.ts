@@ -17,11 +17,15 @@ try {
     database.password === 'PASSWORD' ||
     database.hostname.includes('YOUR-ENDPOINT')
   ) {
-    throw new Error('Replace the DATABASE_URL placeholder in server/.env with your database details.');
+    throw new Error(
+      'Replace the DATABASE_URL placeholder in server/.env with your database details.',
+    );
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Invalid server configuration.');
-  console.error('Complete server/.env before running npm run dev. See README.md for database setup.');
+  console.error(
+    'Complete server/.env before running npm run dev. See README.md for database setup.',
+  );
   process.exit(1);
 }
 
@@ -74,7 +78,9 @@ function start(name: string, entry: string, args: string[]) {
   });
   child.on('exit', (code, signal) => {
     if (stopping) return;
-    console.error(`${name} stopped (${signal ?? code ?? 'unknown'}); stopping development servers.`);
+    console.error(
+      `${name} stopped (${signal ?? code ?? 'unknown'}); stopping development servers.`,
+    );
     void stop(code ?? 1);
   });
 }

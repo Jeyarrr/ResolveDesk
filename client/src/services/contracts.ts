@@ -35,6 +35,19 @@ export interface ApiTicket {
   updatedAt: string;
   resolvedAt: string | null;
   closedAt: string | null;
+  resolvedBy: string | null;
+  resolutionSummary: string | null;
+  closedBy: string | null;
+  resolver: Person | null;
+  closer: Person | null;
+  lifecycleVersion: number;
+  lifecycleActions?: {
+    statusTransitions: ApiStatus[];
+    resolve: boolean;
+    confirm: boolean;
+    close: boolean;
+    reopen: boolean;
+  };
 }
 export interface Comment {
   id: string;
@@ -50,6 +63,8 @@ export interface Activity {
   action: string;
   oldValue: string | null;
   newValue: string | null;
+  explanation: string | null;
+  lifecycleVersion: number | null;
   createdAt: string;
 }
 export interface Page<T> {
