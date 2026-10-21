@@ -2,6 +2,27 @@
 
 A modern IT Help Desk & Ticket Management System designed to streamline technical support requests, ticket assignments, issue tracking, and resolution workflows.
 
+## Demo accounts
+
+Explore ResolveDesk from three perspectives: Administrator, Employee, and IT Support Agent. The following accounts are configured in the project's current local demo database.
+
+| Name   | Role          | Department           | Username | Password |
+| ------ | ------------- | -------------------- | -------- | -------- |
+| Jayr   | Administrator | Administration       | `jear`   | `jear`   |
+| Mon    | Employee      | General              | `monmon` | `monmon` |
+| George | Agent         | Human Resources (HR) | `geor`   | `geor`   |
+
+Start the configured project with `npm run dev`, open [ResolveDesk locally](http://127.0.0.1:5173), and enter a username and password in the login form. Log out before switching accounts.
+
+### Suggested walkthrough
+
+1. **Employee — Mon:** Submit a support ticket, choose its category and priority, and follow its progress.
+2. **Administrator — Jayr:** Find the ticket, assign it to George, and explore user management and reporting.
+3. **Agent — George:** Open the assigned ticket, update its status, reply to the employee, and add an internal support note.
+4. **Employee — Mon:** Return to the ticket to view public replies and the updated status. Internal support notes are visible only to support staff and administrators.
+
+George has the `agent` role and belongs to the HR department. The demo credentials above apply to the configured local database; a fresh installation uses the email accounts and seed passwords described in [Local setup](#local-setup).
+
 ## Development status
 
 **Phase 2 implemented; Neon and production verification pending.** The React interface connects to Express APIs and PostgreSQL. Automated integration checks use isolated PostgreSQL through PGlite and never connect to a shared database. A real Neon connection, production onboarding, and production verification are still required before deployment.
@@ -71,6 +92,8 @@ npm run db:seed -w server
 
 Accounts: `admin@resolvedesk.example`, `agent@resolvedesk.example`, and `employee@resolvedesk.example`, using the passwords you supplied. The seed adds departments, categories, and an assigned sample ticket with public/internal comments. Repeated runs preserve existing passwords and avoid duplicating the sample ticket. Run one seed process at a time. Remove seed passwords and restore the confirmation to `no` afterward. Production seeding is refused.
 
+Fresh development seeds create Jayr (`admin`, Administration), George (`agent`, Human Resources), and Mon (`employee`, General). HR is a department, not an additional role. Existing account IDs, emails, passwords, names, department choices, and sessions are preserved when reseeding; the seed does not overwrite existing accounts.
+
 5. Start both applications:
 
 ```powershell
@@ -79,7 +102,11 @@ npm run dev
 
 Open **http://127.0.0.1:5173**. Express uses port 4000; Vite proxies `/api` to Express. Use `127.0.0.1` consistently, matching CLIENT_ORIGIN. Missing server configuration produces a startup error; there is no mock fallback.
 
-Separate processes: `npm run dev -w server` and `npm run dev -w client`. After building, start the backend with `npm start -w server`.
+The root development launcher starts Vite and tsx directly with Node, avoiding nested Windows npm batch files and their `Terminate batch job (Y/N)?` prompts. Press Ctrl+C to stop both processes. It checks required configuration before launching either app. If PowerShell itself resolves `npm` to `npm.cmd`, use `npm.ps1 run dev` to avoid the outer batch wrapper as well.
+
+For local PostgreSQL, create a dedicated `resolvedesk` database and use its connection string in `server/.env`, with `DB_SSL=false` for a local server without TLS. Do not run application migrations in PostgreSQL's default `postgres` maintenance database. Neon connections continue to require `DB_SSL=true`.
+
+Separate processes: `npm run server` (backend only) and `npm run dev -w client` (frontend only). The backend also supports `npm run dev -w server`. After building, start the backend with `npm start -w server`.
 
 ## Account provisioning
 

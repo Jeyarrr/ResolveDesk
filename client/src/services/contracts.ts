@@ -5,6 +5,7 @@ export interface Person {
   initials: string;
 }
 export interface ApiUser extends User {
+  username: string | null;
   accountStatus: 'active' | 'inactive' | 'suspended';
   departmentId: string | null;
   passwordReady: boolean;

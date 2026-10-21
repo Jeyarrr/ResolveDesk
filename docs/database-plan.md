@@ -18,7 +18,7 @@ All timestamps use PostgreSQL timestamptz and APIs serialize ISO UTC dates. UUID
 
 ## Constraints and indexes
 
-- Unique lower(email) index; input emails normalize to lowercase.
+- Unique lower(email) index; input emails normalize to lowercase. Optional usernames have their own unique lower(username) index and a database format constraint (3-32 lowercase letters, numbers, dots, hyphens, or underscores; the first character must be a letter, number, or underscore).
 - Case-insensitive unique department/category names.
 - Foreign keys explicitly RESTRICT deletion; support history is never cascade-deleted.
 - Status, priority, role, and account status are PostgreSQL enums.

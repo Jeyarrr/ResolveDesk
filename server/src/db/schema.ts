@@ -54,6 +54,7 @@ export const users = pgTable(
     id: id(),
     fullName: text('full_name').notNull(),
     email: text('email').notNull(),
+    username: text('username'),
     passwordHash: text('password_hash'),
     role: role('role').notNull().default('employee'),
     accountStatus: accountStatus('account_status').notNull().default('inactive'),
@@ -63,6 +64,11 @@ export const users = pgTable(
   },
   (t) => [
     uniqueIndex('users_email_unique').on(sql`lower(${t.email})`),
+    uniqueIndex('users_username_unique').on(sql`lower(${t.username})`),
+    check(
+      'users_username_format',
+      sql`${t.username} IS NULL OR ${t.username} ~ '^[a-z0-9_][a-z0-9_.-]{2,31}$'`,
+    ),
     index('users_department_idx').on(t.departmentId),
     index('users_role_status_idx').on(t.role, t.accountStatus),
   ],

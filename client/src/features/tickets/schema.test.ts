@@ -38,9 +38,17 @@ describe('authentication form validation', () => {
       }).success,
     ).toBe(true);
   });
-  it('rejects malformed email and short password', () => {
+  it('accepts username login with an existing short password', () => {
     expect(
-      loginSchema.safeParse({ email: 'invalid', password: 'short', remember: false }).success,
+      loginSchema.safeParse({ email: 'local_user', password: 'short', remember: false }).success,
+    ).toBe(true);
+  });
+  it('rejects malformed identifiers and empty passwords', () => {
+    expect(
+      loginSchema.safeParse({ email: 'invalid email', password: 'short', remember: false }).success,
+    ).toBe(false);
+    expect(
+      loginSchema.safeParse({ email: 'local_user', password: '', remember: false }).success,
     ).toBe(false);
   });
   it('validates recovery email', () => {

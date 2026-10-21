@@ -15,14 +15,14 @@ async function logout(page: Page) {
 }
 test('real login, recovery unavailable, refresh, logout and route guards', async ({ page }) => {
   await page.goto('/login');
-  await page.getByLabel('Email address').fill('invalid');
+  await page.getByLabel('Username or email address').fill('');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByText('Enter a valid email address.')).toBeVisible();
+  await expect(page.locator('#email-error')).toBeVisible();
   await page.getByRole('link', { name: 'Forgot password?' }).click();
   await expect(page.getByRole('status')).toContainText('not yet available');
   await login(page, 'employee');
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Welcome back, Alex' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome back, Mon' })).toBeVisible();
   await page.goto('/team');
   await expect(page).toHaveURL('http://127.0.0.1:5173/');
   await logout(page);
@@ -52,7 +52,7 @@ test('database ticket workflow across employee, admin and agent sessions', async
   await logout(page);
   await login(page);
   await page.goto(url);
-  await page.getByLabel('Assigned agent', { exact: true }).selectOption({ label: 'Jordan Lee' });
+  await page.getByLabel('Assigned agent', { exact: true }).selectOption({ label: 'George' });
   await expect(page.getByRole('status')).toContainText('Changes saved');
   await page.getByLabel('Ticket priority', { exact: true }).selectOption('critical');
   await expect(page.getByLabel('Ticket priority', { exact: true })).toBeEnabled();

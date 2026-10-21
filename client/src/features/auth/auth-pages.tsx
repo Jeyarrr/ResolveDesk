@@ -104,13 +104,15 @@ export function LoginPage() {
       >
         <div>
           <label className="label" htmlFor="email">
-            Email address
+            Username or email address
           </label>
           <input
             id="email"
             className="input"
-            type="email"
+            type="text"
             autoComplete="username"
+            autoCapitalize="none"
+            spellCheck={false}
             {...register('email')}
             aria-invalid={!!errors.email}
             aria-describedby="email-error"

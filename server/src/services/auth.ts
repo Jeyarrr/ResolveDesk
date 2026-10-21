@@ -36,14 +36,19 @@ export function authService(db: Database, config: Config) {
       if (!row) throw new AppError(401, 'Your session has expired. Please sign in');
       return row;
     },
-    async login(email: string, password: string, remember: boolean, oldToken?: string) {
+    async login(identifier: string, password: string, remember: boolean, oldToken?: string) {
+      const normalized = identifier.trim().toLowerCase();
       const [user] = await db
         .select()
         .from(users)
-        .where(sql`lower(${users.email}) = ${email}`);
+        .where(
+          normalized.includes('@')
+            ? sql`lower(${users.email}) = ${normalized}`
+            : sql`lower(${users.username}) = ${normalized}`,
+        );
       const valid = await argon2.verify(user?.passwordHash ?? (await dummyHash), password);
       if (!valid || !user || user.accountStatus !== 'active' || !user.passwordHash)
-        throw new AppError(401, 'Email or password is incorrect');
+        throw new AppError(401, 'Username, email, or password is incorrect');
       const token = randomBytes(32).toString('hex');
       const expiresAt = new Date(Date.now() + (remember ? 7 * 24 : 8) * 3600_000);
       await db.transaction(async (tx) => {
@@ -53,7 +58,7 @@ export function authService(db: Database, config: Config) {
           current.accountStatus !== 'active' ||
           current.passwordHash !== user.passwordHash
         )
-          throw new AppError(401, 'Email or password is incorrect');
+          throw new AppError(401, 'Username, email, or password is incorrect');
         if (oldToken)
           await tx
             .update(sessions)

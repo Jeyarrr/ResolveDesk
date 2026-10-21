@@ -8,7 +8,7 @@ test('login, dashboards, forms and responsive layouts remain accessible', async 
   await page.getByLabel('Email address').fill('admin@resolvedesk.example');
   await page.getByLabel('Password', { exact: true }).fill(process.env.E2E_ADMIN_PASSWORD!);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Welcome back, Taylor' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Welcome back, Jayr' })).toBeVisible();
   await page.screenshot({ path: 'tmp/phase2-dashboard.png', fullPage: true });
   for (const path of ['/', '/tickets/new', '/team']) {
     await page.goto(path);

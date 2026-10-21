@@ -8,8 +8,20 @@ export const email = z
   .max(254)
   .transform((v) => v.toLowerCase());
 export const password = z.string().min(12).max(128);
+export const username = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(
+    /^[a-z0-9_][a-z0-9_.-]{2,31}$/,
+    'Use a username of 3-32 letters, numbers, dots, hyphens, or underscores',
+  );
 export const loginInput = z
-  .object({ email, password: z.string().min(1).max(128), remember: z.boolean().default(false) })
+  .object({
+    email: z.union([email, username]),
+    password: z.string().min(1).max(128),
+    remember: z.boolean().default(false),
+  })
   .strict();
 export const pagination = z.object({
   page: z.coerce.number().int().min(1).max(100000).default(1),
@@ -44,6 +56,7 @@ export const userInput = z
   .object({
     fullName: z.string().trim().min(2).max(100),
     email,
+    username: username.nullable().optional(),
     role: roles.default('employee'),
     accountStatus: z.enum(['active', 'inactive', 'suspended']).default('inactive'),
     departmentId: uuid.nullable(),

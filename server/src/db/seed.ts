@@ -17,6 +17,7 @@ export async function seedDevelopment(db: Database, secrets: z.infer<typeof seed
     'Finance',
     'Operations',
     'Administration',
+    'General',
   ])
     await db.insert(departments).values({ name }).onConflictDoNothing();
   for (const name of [
@@ -29,18 +30,20 @@ export async function seedDevelopment(db: Database, secrets: z.infer<typeof seed
     'Other',
   ])
     await db.insert(categories).values({ name }).onConflictDoNothing();
-  const [department] = await db
-    .select()
-    .from(departments)
-    .where(eq(departments.name, 'Information Technology'));
-  for (const [role, name, secret] of [
-    ['admin', 'Taylor Brooks', secrets.SEED_ADMIN_PASSWORD],
-    ['agent', 'Jordan Lee', secrets.SEED_AGENT_PASSWORD],
-    ['employee', 'Alex Morgan', secrets.SEED_EMPLOYEE_PASSWORD],
+  for (const [role, name, departmentName, secret] of [
+    ['admin', 'Jayr', 'Administration', secrets.SEED_ADMIN_PASSWORD],
+    ['agent', 'George', 'Human Resources', secrets.SEED_AGENT_PASSWORD],
+    ['employee', 'Mon', 'General', secrets.SEED_EMPLOYEE_PASSWORD],
   ] as const) {
     const email = `${role}@resolvedesk.example`;
     const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
-    if (!existing)
+    // Preserve existing identities, credentials, sessions, and support history on reseeding.
+    if (!existing) {
+      const [department] = await db
+        .select()
+        .from(departments)
+        .where(eq(departments.name, departmentName));
+      if (!department) throw new Error(`Development department missing: ${departmentName}`);
       await db
         .insert(users)
         .values({
@@ -48,10 +51,11 @@ export async function seedDevelopment(db: Database, secrets: z.infer<typeof seed
           email,
           role,
           accountStatus: 'active',
-          departmentId: department!.id,
+          departmentId: department.id,
           passwordHash: await hashPassword(secret),
         })
         .onConflictDoNothing();
+    }
   }
   // Seed ticket creation uses the same transactional services as the API.
   const [employee] = await db

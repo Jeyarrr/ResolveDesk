@@ -97,7 +97,8 @@ export function adminService(db: Database) {
         if (
           next.role !== current.role ||
           next.accountStatus !== current.accountStatus ||
-          next.email !== current.email
+          next.email !== current.email ||
+          next.username !== current.username
         )
           await tx.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.userId, id));
         return profile(tx, id);

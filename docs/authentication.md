@@ -2,6 +2,8 @@
 
 ## Login
 
+Sign in with a unique username or an email address. Usernames are optional, case-insensitive, and 3-32 characters long; they cannot contain `@`. The login API's existing `email` field accepts either identifier. Login accepts an existing password without imposing a creation-length rule; normal password provisioning still requires 12-128 characters. Short passwords assigned directly for local development must be replaced before deployment.
+
 1. The browser requests GET /api/auth/csrf. The API sets a random HttpOnly pre-login cookie and returns its HMAC token.
 2. POST /api/auth/login requires the exact configured Origin, JSON, and the matching X-CSRF-Token. Strict validation rejects extra fields.
 3. Argon2id verifies the password (19 MiB memory, two iterations, parallelism one). Unknown accounts use a dummy hash. Unknown, inactive, suspended, and invalid-password accounts receive the same error.

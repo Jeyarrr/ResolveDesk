@@ -12,7 +12,8 @@
     "npm": ">=10"
   },
   "scripts": {
-    "dev": "concurrently -k -n client,server -c cyan,magenta \"npm run dev -w client\" \"npm run dev -w server\"",
+    "dev": "node --import tsx scripts/dev.ts",
+    "server": "node node_modules/tsx/dist/cli.mjs watch server/src/index.ts",
     "build": "npm run build --workspaces",
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces && tsc -p tsconfig.tools.json",

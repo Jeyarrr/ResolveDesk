@@ -122,7 +122,7 @@ describe('authentication and request security', () => {
   it('rejects invalid credentials with a generic error', async () => {
     const r = await login('employee', 'incorrect-password');
     expect(r.response.status).toBe(401);
-    expect(r.response.body.error.message).toBe('Email or password is incorrect');
+    expect(r.response.body.error.message).toBe('Username, email, or password is incorrect');
   });
   it('requires authentication and rejects CSRF attempts', async () => {
     expect((await request(app).get('/api/tickets')).status).toBe(401);

@@ -5,6 +5,7 @@ export const safeUserFields = {
   id: users.id,
   name: users.fullName,
   email: users.email,
+  username: users.username,
   role: users.role,
   accountStatus: users.accountStatus,
   departmentId: users.departmentId,
