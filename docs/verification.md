@@ -1,5 +1,32 @@
 # Verification record
 
+## Phase 3.2 — October 22, 2026
+
+Implemented assignment/reassignment, separate escalation records and an administrator queue, and paginated SQL-backed active-agent workloads. The existing local PostgreSQL configuration and Phase 3.1 lifecycle service are retained.
+
+| Check                             | Result                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Default Vitest suite              | 101 passed, 1 native-only test skipped; 13 files passed                                         |
+| Native PostgreSQL suites          | 27 passed: 12 lifecycle and 15 assignment/escalation/workload tests                             |
+| Native PostgreSQL Playwright      | 5 passed, including assignment/escalation and the full lifecycle workflow                       |
+| Accessibility / responsive layout | Axe checks passed, including the new administrator page; widths 1024, 768, 390 and 320px passed |
+| Formatting                        | Prettier check passed                                                                           |
+| TypeScript                        | Client, server and tooling passed                                                               |
+| ESLint                            | Passed                                                                                          |
+| Production build                  | Client and server passed                                                                        |
+| Migration generation              | No schema drift after migrations 0003 and 0004                                                  |
+| Application data preservation     | All original column values and counts match the pre-migration snapshot                          |
+| Local environment                 | Existing server/.env bytes unchanged                                                            |
+| Credential scan                   | 139 publishable files checked; no actual database URL, session secret or private key found      |
+
+The reviewed additive migrations were applied locally: `0003_gray_mysterio.sql` adds assignment versions; `0004_tricky_zzzax.sql` adds escalation records, constraints and indexes. Before/after verification preserved 4 users, 6 departments, 7 categories, 1 ticket, 2 comments, 4 activity entries and 8 sessions. No pre-existing values changed, including password hashes, account IDs, roles, departments, ticket relationships or session records. George remains an agent in Human Resources. The new escalation table was empty after migration; integration writes used isolated test databases.
+
+Coverage includes eligible/ineligible assignment, required reassignment reasons, audit history, ownership/lifecycle preservation, transfer of agent access, stale and duplicate changes, concurrent assignment/escalation requests, database uniqueness, escalation acknowledgement/resolution, private history, SQL workload totals across all five statuses, pagination, and role restrictions. UI tests cover workload display, reason validation, explicit confirmation, cancellation, captured versions and keyboard dismissal.
+
+The native runner creates one fresh local test database per suite because development seeding intentionally preserves existing password hashes. This prevents separately generated test credentials from colliding. Databases are retained in pgAdmin for inspection. Vitest workers are capped at two to avoid excessive concurrent PGlite/jsdom resource use on local development machines.
+
+Manual demo instructions and API contracts are in [Assignment, escalation and workload management](assignment-escalation.md). Known limits: assignment is manual, workload counts are advisory, other browser sessions refresh on focus/reload, and assignment history displays the agents' current names. Attachments, advanced conversations, live notifications/SLA automation and deployment remain later milestones. No Git commit or push was performed.
+
 ## Phase 3.1 — October 22, 2026
 
 Validated against the existing local PostgreSQL installation. No Neon configuration, synchronization, deployment, commit, or push was performed.

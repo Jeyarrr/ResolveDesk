@@ -2,7 +2,7 @@
 
 PostgreSQL is the source of truth. Drizzle definitions are in server/src/db/schema.ts; generated SQL and snapshots are in server/drizzle.
 
-The current runtime uses local PostgreSQL managed in pgAdmin 4, with the existing `DATABASE_URL` and `DB_SSL=false`. No cloud synchronization or Neon configuration is part of Phase 3.1.
+The current runtime uses local PostgreSQL managed in pgAdmin 4, with the existing `DATABASE_URL` and `DB_SSL=false`. No cloud synchronization or Neon configuration is part of Phase 3.2.
 
 | Table             | Fields and relationships                                                                                                                                       |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -30,6 +30,8 @@ All timestamps use PostgreSQL timestamptz and APIs serialize ISO UTC dates. UUID
 
 ## Migrations
 
+Phase 3.2 adds `tickets.assignment_version` (nonnegative, default zero) in `0003_gray_mysterio.sql`. Migration `0004_tricky_zzzax.sql` adds `ticket_escalations` with ticket/requesting-user foreign keys, reason, separate status, acknowledging/resolving users and timestamps. All foreign keys restrict deletion. A partial unique index prevents more than one open/acknowledged escalation per ticket. Check constraints validate state metadata and reason length; indexes support ticket history and state/date queues. Existing account, ticket, session and activity rows remain untouched. See [assignment/escalation details](assignment-escalation.md).
+
 Phase 3.1 migration `0002_sticky_garia.sql` is additive:
 
 - `tickets.resolved_by` and `tickets.closed_by`: nullable user foreign keys with restricted deletion.
@@ -47,4 +49,4 @@ Development seeds are explicit, guarded, and preserve existing passwords. Accoun
 
 ## Validation boundary
 
-Generated SQL is applied in isolated PostgreSQL tests. Default tests use PGlite for fast regression and disk reopen checks. `npm run test:postgres` creates a separate local `resolvedesk_test_*` database for native PostgreSQL tests, including real pooled-connection contention, rollback, permissions, and lifecycle persistence. `npm run test:e2e:postgres` uses another separate local test database for browser workflows. Both retain their databases for inspection and print their names without credentials. Hosted networking/TLS and deployment behavior remain future checks.
+Generated SQL is applied in isolated PostgreSQL tests. Default tests use PGlite for fast regression and disk reopen checks. `npm run test:postgres` creates a separate local `resolvedesk_test_*` database per suite for native PostgreSQL tests, including real pooled-connection contention, rollback, permissions, and lifecycle persistence. `npm run test:e2e:postgres` uses another separate local test database for browser workflows. Both retain their databases for inspection and print their names without credentials. Hosted networking/TLS and deployment behavior remain future checks.

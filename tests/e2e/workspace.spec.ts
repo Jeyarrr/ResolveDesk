@@ -53,10 +53,54 @@ test('database ticket workflow across employee, admin and agent sessions', async
   await logout(page);
   await login(page);
   await page.goto(url);
+  await page.getByRole('button', { name: 'Assign ticket', exact: true }).click();
   await page.getByLabel('Assigned agent', { exact: true }).selectOption({ label: 'George' });
-  await expect(page.getByRole('status')).toContainText('Changes saved');
+  await page.getByRole('button', { name: 'Confirm assignment' }).click();
+  await expect(page.getByText('Assignment saved.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Reassign ticket', exact: true }).click();
+  await page.getByLabel('Assigned agent', { exact: true }).selectOption('unassigned');
+  await expect(page.getByRole('button', { name: 'Confirm assignment' })).toBeDisabled();
+  await page
+    .getByLabel('Reassignment reason')
+    .fill('Return to the queue for administrator review.');
+  await page.getByRole('button', { name: 'Confirm assignment' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Assign ticket', exact: true }).click();
+  await page.getByLabel('Assigned agent', { exact: true }).selectOption({ label: 'George' });
+  await expect(
+    page.getByRole('dialog').getByText(/Total includes resolved and closed/),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm assignment' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.getByLabel('Ticket priority', { exact: true }).selectOption('critical');
   await expect(page.getByLabel('Ticket priority', { exact: true })).toBeEnabled();
+  await logout(page);
+  await login(page, 'agent');
+  await page.goto(url);
+  await page.getByRole('button', { name: 'Escalate ticket', exact: true }).click();
+  await page
+    .getByLabel('Escalation reason')
+    .fill('Administrator authorization is needed for network hardware replacement.');
+  await page.getByRole('button', { name: 'Confirm escalation request' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Active escalation: open', { exact: true })).toBeVisible();
+  await logout(page);
+  await login(page);
+  await page.goto('/escalations');
+  await expect(page.getByRole('table')).toContainText('George');
+  await page.getByLabel('Search escalated tickets').fill('Browser integration VPN issue');
+  await page.getByRole('button', { name: 'Acknowledge', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm escalation update' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByText('Escalation: acknowledged', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Resolve escalation', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm escalation update' }).click();
+  await expect(page.getByText('No escalations match this view.')).toBeVisible();
+  await page.getByLabel('Escalation state').selectOption('resolved');
+  await expect(page.getByText('Escalation: resolved', { exact: true })).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.setViewportSize({ width: 1280, height: 800 });
   await logout(page);
   await login(page, 'agent');
   await page.goto(url);

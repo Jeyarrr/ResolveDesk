@@ -1,0 +1,2 @@
+ALTER TABLE "tickets" ADD COLUMN "assignment_version" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "tickets" ADD CONSTRAINT "ticket_assignment_version_nonnegative" CHECK ("tickets"."assignment_version" >= 0);

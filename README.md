@@ -25,9 +25,11 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 
 ## Development status
 
-**Phase 3.1: Advanced Ticket Lifecycle & Resolution Management.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
+**Phase 3.2: Advanced Ticket Assignment, Escalation & Agent Workload Management.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
 
 Phase 3.1 adds structured resolution summaries, employee confirmation, reasoned reopening, audited administrator closure/reopening, lifecycle progress, and version checks for conflicting requests. See the [lifecycle rules and walkthrough](docs/ticket-lifecycle.md).
+
+Phase 3.2 adds confirmed assignment/reassignment with reasons and conflict protection, unassigned filtering, private agent escalations, an administrator escalation queue, and SQL-backed workload counts. See [assignment and escalation rules, APIs, and walkthrough](docs/assignment-escalation.md). Existing lifecycle behavior remains available.
 
 ## Objectives and functionality
 
@@ -36,6 +38,7 @@ Phase 3.1 adds structured resolution summaries, employee confirmation, reasoned 
 - Administrators manage organizational tickets, assignments, priorities, accounts, departments, and categories.
 - Database sessions, Argon2id password hashing, CSRF protection, role checks, and object-level authorization.
 - Persistent conversations and transactional ticket activity history.
+- Audited reassignment, separate escalation history, and active agent workload information before assignment.
 - Resolution summaries, resolving and closing actors, employee confirmation, and complete reopening history.
 - Server pagination, search, category/priority/status filtering, and sorting.
 - Role-scoped dashboards and database reports, trends, status and priority distributions.
@@ -56,7 +59,7 @@ Browser → React/TanStack Query → credentialed Express REST API → permissio
 
 ## Local setup
 
-Requires Node.js 24+, npm 10+, and local PostgreSQL. Existing installations should keep their working `server/.env` and database; no reset or reseeding is needed for Phase 3.1.
+Requires Node.js 24+, npm 10+, and local PostgreSQL. Existing installations should keep their working `server/.env` and database; no reset or reseeding is needed for Phase 3.2.
 
 1. Install from the repository root:
 
@@ -83,6 +86,8 @@ npm run db:migrate -w server
 For schema changes, edit `server/src/db/schema.ts`, run `npm run db:generate -w server`, review SQL, then migrate. The migration ledger prevents duplicate application. Startup never resets or migrates databases automatically. Do not use schema push/reset on shared databases.
 
 Phase 3.1 migration `0002_sticky_garia.sql` adds resolution metadata and lifecycle versions to tickets, and explanations/version uniqueness to existing activity records. It preserves existing users, credentials, sessions, tickets, and history. No new table or status is introduced. Review migrations before applying them; review/approval is required for potentially destructive changes.
+
+Phase 3.2 migrations `0003_gray_mysterio.sql` and `0004_tricky_zzzax.sql` add assignment versions and a separate escalation table with constraints and indexes. Existing records and local connection settings are preserved. Ticket statuses and account roles are unchanged.
 
 4. For initial **development** accounts, set three different strong passwords (12–128 characters) in ignored `server/.env`:
 
@@ -170,8 +175,8 @@ These tests validate local PostgreSQL multi-connection contention. Hosted networ
 
 ## Roadmap and repository safety
 
-Next is Phase 3.2: advanced reassignment, escalation, and workload balancing. Phase 3.3 covers attachments; Phase 3.4 covers advanced conversations; Phase 4 covers real-time notifications and SLA automation. Future deployment work includes hosted PostgreSQL, onboarding/recovery, backups, and production hardening. These are outside Phase 3.1.
+Next is Phase 3.3: file attachments. Phase 3.4 covers advanced conversations; Phase 4 covers real-time notifications and SLA automation. Future deployment work includes hosted PostgreSQL, onboarding/recovery, backups, and production hardening. These are outside Phase 3.2. Assignment remains manual; automatic workload balancing is not implemented.
 
 No automatic deployment, commits, pushes, database wipes, or history rewrites are part of this phase.
 
-Suggested commit: `feat: implement advanced ticket lifecycle and resolution management`.
+Suggested commit: `feat: implement advanced ticket assignment and escalation management`.

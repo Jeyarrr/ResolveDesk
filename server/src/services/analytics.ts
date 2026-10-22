@@ -44,7 +44,14 @@ export async function analytics(db: Database, actor: Actor, days: number, period
             .from(users)
             .where(and(eq(users.role, 'agent'), eq(users.accountStatus, 'active')))
         : Promise.resolve([]),
-      listTickets(db, actor, { page: 1, limit: 5, search: '', sort: 'recent', mine: 'false' }),
+      listTickets(db, actor, {
+        page: 1,
+        limit: 5,
+        search: '',
+        sort: 'recent',
+        mine: 'false',
+        unassigned: 'false',
+      }),
       actor.role === 'admin'
         ? db
             .select({

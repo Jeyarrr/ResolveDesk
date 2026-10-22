@@ -99,6 +99,7 @@ export const tickets = pgTable(
     resolutionSummary: text('resolution_summary'),
     closedBy: uuid('closed_by').references(() => users.id, { onDelete: 'restrict' }),
     lifecycleVersion: integer('lifecycle_version').notNull().default(0),
+    assignmentVersion: integer('assignment_version').notNull().default(0),
     ...times(),
   },
   (t) => [
@@ -108,6 +109,7 @@ export const tickets = pgTable(
     index('tickets_category_idx').on(t.categoryId),
     index('tickets_created_idx').on(t.createdAt),
     check('ticket_lifecycle_version_nonnegative', sql`${t.lifecycleVersion} >= 0`),
+    check('ticket_assignment_version_nonnegative', sql`${t.assignmentVersion} >= 0`),
     check(
       'ticket_resolution_details_consistency',
       sql`((${t.resolvedBy} IS NULL) = (${t.resolutionSummary} IS NULL)) AND (${t.resolvedBy} IS NULL OR (${t.status} IN ('resolved','closed') AND length(trim(${t.resolutionSummary})) BETWEEN 20 AND 5000)) AND (${t.closedBy} IS NULL OR ${t.status} = 'closed')`,
@@ -170,5 +172,38 @@ export const sessions = pgTable(
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
   },
   (t) => [index('sessions_user_idx').on(t.userId), index('sessions_expiry_idx').on(t.expiresAt)],
+);
+export const escalations = pgTable(
+  'ticket_escalations',
+  {
+    id: id(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    requestedBy: uuid('requested_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    reason: text('reason').notNull(),
+    status: text('status', { enum: ['open', 'acknowledged', 'resolved'] })
+      .notNull()
+      .default('open'),
+    acknowledgedBy: uuid('acknowledged_by').references(() => users.id, { onDelete: 'restrict' }),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    acknowledgedAt: timestamp('acknowledged_at', { withTimezone: true }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (t) => [
+    uniqueIndex('escalations_one_active_per_ticket')
+      .on(t.ticketId)
+      .where(sql`${t.status} IN ('open', 'acknowledged')`),
+    index('escalations_status_created_idx').on(t.status, t.createdAt),
+    index('escalations_ticket_created_idx').on(t.ticketId, t.createdAt),
+    check('escalation_reason_length', sql`length(trim(${t.reason})) BETWEEN 10 AND 2000`),
+    check(
+      'escalation_state_consistency',
+      sql`${t.status} IN ('open', 'acknowledged', 'resolved') AND ((${t.acknowledgedBy} IS NULL) = (${t.acknowledgedAt} IS NULL)) AND ((${t.resolvedBy} IS NULL) = (${t.resolvedAt} IS NULL)) AND ((${t.status} = 'resolved') = (${t.resolvedAt} IS NOT NULL)) AND (${t.status} <> 'acknowledged' OR ${t.acknowledgedAt} IS NOT NULL) AND (${t.status} <> 'open' OR ${t.acknowledgedAt} IS NULL)`,
+    ),
+  ],
 );
 export type Actor = typeof users.$inferSelect;

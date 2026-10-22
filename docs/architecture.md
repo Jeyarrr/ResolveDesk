@@ -1,5 +1,11 @@
 # Application architecture
 
+## Phase 3.2 support operations
+
+The existing ticket service owns assignment/reassignment, locking eligible agents and tickets before a version-checked update and activity insert. Assignment versions are separate from lifecycle versions. The lifecycle service remains unchanged. `services/escalations.ts` owns scoped escalation reads and transactional requests/acknowledgement/resolution; `services/workloads.ts` aggregates current ticket assignments for active agents. All APIs reuse session authentication, CSRF checks and centralized errors.
+
+Ticket details reuse Dialog, Button, Card and query hooks for assignment and escalation. The administrator **Escalations & Workload** page combines paginated queue and workload views. Successful mutations and conflicts refresh protected query caches. See [policies and concurrency boundaries](assignment-escalation.md).
+
 ## Runtime
 
 The existing React application retains its shell, themes, reusable controls, ticket table, forms, charts, and role navigation. TanStack Query owns remote state. Local storage is used only for appearance/sidebar preferences; legacy mock modules are retained as regression fixtures and are not used for live tickets or authentication.

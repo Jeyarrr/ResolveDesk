@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { z } from 'zod';
 import type { Executor } from '../db/connection.js';
@@ -52,6 +52,7 @@ export function ticketRows(db: Executor, where: SQL | undefined) {
       resolutionSummary: tickets.resolutionSummary,
       closedBy: tickets.closedBy,
       lifecycleVersion: tickets.lifecycleVersion,
+      assignmentVersion: tickets.assignmentVersion,
       resolver: person(resolver),
       closer: person(closer),
       requester: person(requester),
@@ -69,6 +70,7 @@ export async function listTickets(db: Executor, actor: Actor, q: z.infer<typeof 
   const escaped = q.search.replace(/[\\%_]/g, '\\$&');
   const where = and(
     scope(actor),
+    q.unassigned === 'true' ? isNull(tickets.assignedAgentId) : undefined,
     q.mine === 'true' && actor.role === 'admin' ? eq(tickets.requesterId, actor.id) : undefined,
     q.status ? eq(tickets.status, q.status) : undefined,
     q.priority ? eq(tickets.priority, q.priority) : undefined,
@@ -125,6 +127,8 @@ export async function ticketComments(db: Executor, actor: Actor, id: string) {
 }
 export async function ticketActivity(db: Executor, actor: Actor, id: string) {
   await permittedTicket(db, actor, id);
+  const previousAgent = alias(users, 'previous_agent');
+  const nextAgent = alias(users, 'next_agent');
   return db
     .select({
       id: activity.id,
@@ -133,6 +137,8 @@ export async function ticketActivity(db: Executor, actor: Actor, id: string) {
       oldValue: activity.oldValue,
       newValue: activity.newValue,
       explanation: activity.explanation,
+      previousAgentName: previousAgent.fullName,
+      nextAgentName: nextAgent.fullName,
       lifecycleVersion: activity.lifecycleVersion,
       createdAt: activity.createdAt,
       actor: person(users),
@@ -140,6 +146,14 @@ export async function ticketActivity(db: Executor, actor: Actor, id: string) {
     .from(activity)
     .innerJoin(users, eq(users.id, activity.actorId))
     .innerJoin(tickets, eq(tickets.id, activity.ticketId))
+    .leftJoin(
+      previousAgent,
+      sql`${previousAgent.id}::text = ${activity.oldValue} AND ${activity.action} IN ('Ticket assigned', 'Ticket reassigned')`,
+    )
+    .leftJoin(
+      nextAgent,
+      sql`${nextAgent.id}::text = ${activity.newValue} AND ${activity.action} IN ('Ticket assigned', 'Ticket reassigned')`,
+    )
     .where(
       and(
         eq(activity.ticketId, id),

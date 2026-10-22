@@ -15,6 +15,7 @@ const Article = lazy(() =>
 const Notifications = lazy(() => import('../features/notifications/notifications-page'));
 const Team = lazy(() => import('../features/admin/team-page'));
 const Reports = lazy(() => import('../features/admin/reports-page'));
+const Escalations = lazy(() => import('../features/admin/escalations-page'));
 const Settings = lazy(() => import('../pages/settings-page'));
 const NotFound = lazy(() => import('../pages/not-found-page'));
 export const router = createBrowserRouter([
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
             children: [
               { path: 'team', element: <Team /> },
               { path: 'reports', element: <Reports /> },
+              { path: 'escalations', element: <Escalations /> },
             ],
           },
           { path: '*', element: <NotFound /> },

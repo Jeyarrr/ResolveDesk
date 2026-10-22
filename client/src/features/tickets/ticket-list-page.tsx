@@ -24,6 +24,7 @@ export default function TicketListPage({ mine = false }: { mine?: boolean }) {
   const { user } = useApp();
   const [filters, setFilters] = useState<TicketFilters>({});
   const [page, setPage] = useState(1);
+  const [unassigned, setUnassigned] = useState(false);
   const references = useApi<Reference[]>('/ticket-categories');
   const query = useApi<Page<ApiTicket>>(
     '/tickets?' +
@@ -34,6 +35,7 @@ export default function TicketListPage({ mine = false }: { mine?: boolean }) {
         page,
         limit: 8,
         mine: String(mine),
+        unassigned: String(unassigned),
       }),
     true,
     true,
@@ -49,7 +51,9 @@ export default function TicketListPage({ mine = false }: { mine?: boolean }) {
     setFilters((previous) => ({ ...previous, [key]: value }));
     setPage(1);
   };
-  const activeCount = [filters.status, filters.priority, filters.category].filter(Boolean).length;
+  const activeCount = [filters.status, filters.priority, filters.category, unassigned].filter(
+    Boolean,
+  ).length;
   return (
     <>
       <PageHeader
@@ -86,6 +90,18 @@ export default function TicketListPage({ mine = false }: { mine?: boolean }) {
             {status}
           </button>
         ))}
+        {user.role === 'admin' && (
+          <button
+            className={unassigned ? 'selected' : ''}
+            aria-pressed={unassigned}
+            onClick={() => {
+              setUnassigned(!unassigned);
+              setPage(1);
+            }}
+          >
+            Unassigned {unassigned ? '✓' : ''}
+          </button>
+        )}
       </div>
       <QueryState query={query} />
       <section className="card overflow-hidden" aria-label="Ticket list">
@@ -157,6 +173,7 @@ export default function TicketListPage({ mine = false }: { mine?: boolean }) {
               variant="ghost"
               onClick={() => {
                 setFilters({});
+                setUnassigned(false);
                 setPage(1);
               }}
             >

@@ -6,6 +6,8 @@ Cookie authentication is required except health, CSRF bootstrap, and login. Muta
 
 ## Endpoints
 
+Phase 3.2 adds `GET /users/workloads`, `GET /escalations`, `GET/POST /tickets/:id/escalations`, and `PATCH /escalations/:id/acknowledge` / `/resolve`. Existing assignment accepts `assignedAgentId`, assignment `expectedVersion` and a required reassignment `reason`; ticket lists accept `unassigned=true`. See [payloads, roles, pagination and concurrency](assignment-escalation.md#apis). All paths below use the `/api` prefix.
+
 | Method    | Path                            | Purpose                                         |
 | --------- | ------------------------------- | ----------------------------------------------- |
 | GET       | /health                         | Database connectivity check                     |
@@ -22,7 +24,7 @@ Cookie authentication is required except health, CSRF bootstrap, and login. Muta
 | PATCH     | /tickets/:id/confirm-resolution | Owning employee: expectedVersion                |
 | PATCH     | /tickets/:id/close              | Administrator: reason, expectedVersion          |
 | PATCH     | /tickets/:id/reopen             | Eligible viewer: reason, expectedVersion        |
-| PATCH     | /tickets/:id/assign             | Admin assignedAgentId UUID or null              |
+| PATCH     | /tickets/:id/assign             | Admin assignment with version and reason        |
 | GET/POST  | /tickets/:id/comments           | List or add message, isInternal                 |
 | GET       | /tickets/:id/activity           | Authorized chronological history                |
 | GET/POST  | /users                          | Admin page or create inactive account           |
@@ -41,7 +43,7 @@ User listing: page, limit, search (name/email), role, accountStatus. Creation/ed
 
 Reference fields: name, description, active. Non-admin lists show active entries only. Archival does not delete existing links.
 
-Analytics: days (1–90, default 14), period (false default). period=true limits cohort metrics to tickets created in that UTC range. Volume series separately counts creation/resolution events in the range. Administrator agent workload shows the top 20 agents. SLA is null. Current aggregate queries may observe concurrent committed updates between statements; analytics are not an accounting snapshot.
+Analytics: days (1–90, default 14), period (false default). period=true limits cohort metrics to tickets created in that UTC range. Volume series separately counts creation/resolution events in the range. The existing dashboard performance summary shows the top 20 agents; the separate Phase 3.2 workload API paginates all active agents. SLA is null. Current aggregate queries may observe concurrent committed updates between statements; analytics are not an accounting snapshot.
 
 Comments/history are ordered oldest-first with stable tie breaks. Lifecycle events include `explanation` and `lifecycleVersion`; activity ties use lifecycle version then UUID. Their complete history is currently returned; cursor pagination for long conversations is future work.
 

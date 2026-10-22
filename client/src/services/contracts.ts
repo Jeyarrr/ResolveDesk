@@ -41,6 +41,7 @@ export interface ApiTicket {
   resolver: Person | null;
   closer: Person | null;
   lifecycleVersion: number;
+  assignmentVersion: number;
   lifecycleActions?: {
     statusTransitions: ApiStatus[];
     resolve: boolean;
@@ -64,6 +65,8 @@ export interface Activity {
   oldValue: string | null;
   newValue: string | null;
   explanation: string | null;
+  previousAgentName?: string | null;
+  nextAgentName?: string | null;
   lifecycleVersion: number | null;
   createdAt: string;
 }
@@ -72,6 +75,35 @@ export interface Page<T> {
   total: number;
   page: number;
   limit: number;
+}
+export interface Escalation {
+  id: string;
+  ticketId: string;
+  ticketNumber: number;
+  subject: string;
+  priority: ApiPriority;
+  ticketStatus: ApiStatus;
+  assigneeName: string | null;
+  requestedBy: string;
+  requestedByName: string;
+  reason: string;
+  status: 'open' | 'acknowledged' | 'resolved';
+  createdAt: string;
+  acknowledgedAt: string | null;
+  acknowledgedByName: string | null;
+  resolvedAt: string | null;
+  resolvedByName: string | null;
+}
+export interface AgentWorkload {
+  id: string;
+  name: string;
+  department: string | null;
+  total: number;
+  open: number;
+  inProgress: number;
+  pending: number;
+  resolved: number;
+  closed: number;
 }
 export const statusLabels = {
   open: 'Open',

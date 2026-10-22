@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
+    // Bound parallel PGlite/jsdom workers to avoid memory pressure on local development machines.
+    maxWorkers: 2,
     projects: [
       {
         test: {

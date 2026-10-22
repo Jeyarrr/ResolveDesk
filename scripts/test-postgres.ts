@@ -14,37 +14,44 @@ if (
   throw new Error(
     'This runner requires the existing local development PostgreSQL configuration (DB_SSL=false).',
   );
-const name = `resolvedesk_test_${Date.now()}_${randomBytes(4).toString('hex')}`;
-const client = new pg.Client({ connectionString: url.toString(), ssl: false });
-try {
-  await client.connect();
-  await client.query(`CREATE DATABASE "${name}"`);
-} finally {
-  await client.end();
-}
-url.pathname = '/' + name;
-console.log(`Using isolated local test database: ${name}. The application database is unchanged.`);
 const browser = process.argv[2] === 'browser';
-const entry = browser
-  ? '../node_modules/@playwright/test/cli.js'
-  : '../node_modules/vitest/vitest.mjs';
-const child = spawn(
-  process.execPath,
-  [
-    fileURLToPath(new URL(entry, import.meta.url)),
-    ...(browser ? ['test'] : ['run', 'server/src/lifecycle.test.ts']),
-  ],
-  {
-    stdio: 'inherit',
-    shell: false,
-    env: { ...process.env, TEST_DATABASE_URL: url.toString() },
-  },
-);
-child.on('exit', (code) => {
+const suites = browser ? [null] : ['server/src/lifecycle.test.ts', 'server/src/assignment.test.ts'];
+for (const suite of suites) {
+  // Separate suites preserve seeded identities without sharing credentials or mutating another suite's records.
+  const name = `resolvedesk_test_${Date.now()}_${randomBytes(4).toString('hex')}`;
+  const client = new pg.Client({ connectionString: config.DATABASE_URL, ssl: false });
+  try {
+    await client.connect();
+    await client.query(`CREATE DATABASE "${name}"`);
+  } finally {
+    await client.end();
+  }
+  url.pathname = '/' + name;
+  console.log(
+    `Using isolated local test database: ${name}. The application database is unchanged.`,
+  );
+  const entry = browser
+    ? '../node_modules/@playwright/test/cli.js'
+    : '../node_modules/vitest/vitest.mjs';
+  const code = await new Promise<number>((resolve) => {
+    const child = spawn(
+      process.execPath,
+      [fileURLToPath(new URL(entry, import.meta.url)), ...(suite ? ['run', suite] : ['test'])],
+      {
+        stdio: 'inherit',
+        shell: false,
+        env: { ...process.env, TEST_DATABASE_URL: url.toString() },
+      },
+    );
+    child.on('exit', (code) => resolve(code ?? 1));
+    child.on('error', () => {
+      console.error('Could not launch test runner');
+      resolve(1);
+    });
+  });
   console.log(`Test database retained for inspection in pgAdmin: ${name}`);
-  process.exitCode = code ?? 1;
-});
-child.on('error', () => {
-  console.error('Could not launch test runner');
-  process.exitCode = 1;
-});
+  if (code !== 0) {
+    process.exitCode = code;
+    break;
+  }
+}

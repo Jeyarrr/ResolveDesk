@@ -17,6 +17,18 @@ export const resolutionInput = z
   })
   .strict();
 export const confirmationInput = z.object({ expectedVersion: lifecycleVersion }).strict();
+export const assignmentInput = z
+  .object({
+    assignedAgentId: uuid.nullable(),
+    expectedVersion: lifecycleVersion.default(0),
+    reason: z
+      .string()
+      .trim()
+      .min(10, 'Give a reason of at least 10 characters.')
+      .max(2000)
+      .optional(),
+  })
+  .strict();
 export const reasonInput = z
   .object({
     expectedVersion: lifecycleVersion,
@@ -49,6 +61,17 @@ export const pagination = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   search: z.string().trim().max(120).default(''),
 });
+export const escalationInput = z
+  .object({
+    reason: z.string().trim().min(10, 'Give a reason of at least 10 characters.').max(2000),
+  })
+  .strict();
+export const escalationActionInput = z
+  .object({ expectedStatus: z.enum(['open', 'acknowledged']) })
+  .strict();
+export const escalationQuery = pagination
+  .extend({ state: z.enum(['active', 'resolved', 'all']).default('active') })
+  .strict();
 export const ticketQuery = pagination
   .extend({
     status: statuses.optional(),
@@ -56,6 +79,7 @@ export const ticketQuery = pagination
     category: uuid.optional(),
     sort: z.enum(['recent', 'oldest', 'priority', 'subject']).default('recent'),
     mine: z.enum(['true', 'false']).default('false'),
+    unassigned: z.enum(['true', 'false']).default('false'),
   })
   .strict();
 export const ticketInput = z

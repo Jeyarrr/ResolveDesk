@@ -5,6 +5,8 @@ import type { Database } from '../db/connection.js';
 import { tickets, users } from '../db/schema.js';
 import * as input from '../validation/schemas.js';
 import { ticketService } from '../services/tickets.js';
+import { escalationService } from '../services/escalations.js';
+import { agentWorkloads } from '../services/workloads.js';
 import { lifecycleService, lifecycleActions } from '../services/lifecycle.js';
 import { adminService } from '../services/admin.js';
 import { analytics } from '../services/analytics.js';
@@ -19,6 +21,7 @@ import {
 import { AppError } from '../middleware/errors.js';
 export function controllers(db: Database) {
   const service = ticketService(db),
+    escalation = escalationService(db),
     admin = adminService(db),
     lifecycle = lifecycleService(db);
   const wrap =
@@ -28,6 +31,18 @@ export function controllers(db: Database) {
     };
   const id = (req: Parameters<RequestHandler>[0]) => input.uuid.parse(req.params.id);
   return {
+    workloads: wrap((req) =>
+      agentWorkloads(db, req.actor, input.pagination.strict().parse(req.query)),
+    ),
+    escalations: wrap((req) => escalation.list(req.actor, input.escalationQuery.parse(req.query))),
+    ticketEscalations: wrap((req) =>
+      escalation.list(req.actor, input.escalationQuery.parse(req.query), id(req)),
+    ),
+    createEscalation: wrap((req) => escalation.create(req.actor, id(req), req.body), 201),
+    acknowledgeEscalation: wrap((req) =>
+      escalation.change(req.actor, id(req), 'acknowledge', req.body),
+    ),
+    resolveEscalation: wrap((req) => escalation.change(req.actor, id(req), 'resolve', req.body)),
     tickets: wrap((req) => listTickets(db, req.actor, input.ticketQuery.parse(req.query))),
     ticket: wrap(async (req) => {
       const [row] = await ticketRows(db, and(eq(tickets.id, id(req)), scope(req.actor)));
@@ -43,14 +58,10 @@ export function controllers(db: Database) {
     confirmResolution: wrap((req) => lifecycle.confirm(req.actor, id(req), req.body)),
     close: wrap((req) => lifecycle.close(req.actor, id(req), req.body)),
     reopen: wrap((req) => lifecycle.reopen(req.actor, id(req), req.body)),
-    assign: wrap((req) =>
-      service.assign(
-        req.actor,
-        id(req),
-        z.object({ assignedAgentId: input.uuid.nullable() }).strict().parse(req.body)
-          .assignedAgentId,
-      ),
-    ),
+    assign: wrap((req) => {
+      const data = input.assignmentInput.parse(req.body);
+      return service.assign(req.actor, id(req), data.assignedAgentId, data);
+    }),
     comments: wrap((req) => ticketComments(db, req.actor, id(req))),
     comment: wrap(
       (req) => service.comment(req.actor, id(req), input.commentInput.parse(req.body)),

@@ -27,6 +27,7 @@ const base: ApiTicket = {
   closedBy: null,
   resolutionSummary: 'Replaced the broken adapter and verified connectivity.',
   lifecycleVersion: 2,
+  assignmentVersion: 1,
   lifecycleActions: {
     statusTransitions: [],
     resolve: false,

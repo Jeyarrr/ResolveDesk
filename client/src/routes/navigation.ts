@@ -61,6 +61,13 @@ export const navigation = [
     section: 'Administration',
   },
   {
+    to: '/escalations',
+    label: 'Escalations & Workload',
+    icon: Layers,
+    roles: ['admin'],
+    section: 'Administration',
+  },
+  {
     to: '/reports',
     label: 'Reports & Analytics',
     icon: ChartNoAxesCombined,

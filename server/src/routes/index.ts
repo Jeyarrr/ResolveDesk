@@ -75,7 +75,13 @@ export function apiRouter(db: Database, config: Config) {
   router.get('/tickets/:id/comments', c.comments);
   router.post('/tickets/:id/comments', c.comment);
   router.get('/tickets/:id/activity', c.activity);
+  router.get('/tickets/:id/escalations', requireRole('agent', 'admin'), c.ticketEscalations);
+  router.post('/tickets/:id/escalations', requireRole('agent'), c.createEscalation);
+  router.get('/escalations', requireRole('admin'), c.escalations);
+  router.patch('/escalations/:id/acknowledge', requireRole('admin'), c.acknowledgeEscalation);
+  router.patch('/escalations/:id/resolve', requireRole('admin'), c.resolveEscalation);
   router.get('/users', requireRole('admin'), c.users);
+  router.get('/users/workloads', requireRole('admin'), c.workloads);
   router.post('/users', requireRole('admin'), c.createUser);
   router.get('/users/:id', requireRole('admin'), c.user);
   router.patch('/users/:id', requireRole('admin'), c.updateUser);

@@ -8,8 +8,6 @@ import {
   priorityLabels,
   displayPerson,
   type ApiTicket,
-  type ApiUser,
-  type Page,
   type Comment,
   type Activity,
   type Reference,
@@ -19,17 +17,14 @@ import { Avatar, Badge, Card, InlineMessage } from '../../components/shared/prim
 import { QueryState } from '../../components/shared/query-state';
 import { Button } from '../../components/ui/button';
 import { TicketLifecycle } from './ticket-lifecycle';
+import { TicketAssignment } from './ticket-assignment';
+import { TicketEscalations } from './ticket-escalations';
 export default function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useApp();
   const ticket = useApi<ApiTicket>('/tickets/' + id);
   const comments = useApi<Comment[]>('/tickets/' + id + '/comments');
   const activity = useApi<Activity[]>('/tickets/' + id + '/activity');
-  const [agentSearch, setAgentSearch] = useState('');
-  const agents = useApi<Page<ApiUser>>(
-    '/users?role=agent&accountStatus=active&limit=100&search=' + encodeURIComponent(agentSearch),
-    user?.role === 'admin',
-  );
   const categories = useApi<Reference[]>('/ticket-categories', user?.role === 'admin');
   const mutation = useApiMutation();
   const [reply, setReply] = useState('');
@@ -83,6 +78,7 @@ export default function TicketDetailPage() {
               Attachments are not available until secure file storage is configured.
             </div>
           </Card>
+          {manageable && <TicketEscalations key={t.id} ticket={t} />}
           {user?.role === 'admin' && (
             <Card title="Edit ticket details">
               <form
@@ -218,11 +214,17 @@ export default function TicketDetailPage() {
                       {a.explanation && (
                         <p className="whitespace-pre-wrap break-words">{a.explanation}</p>
                       )}
-                      {a.newValue && (
-                        <p className="break-all">
-                          {a.oldValue ? a.oldValue + ' → ' : ''}
-                          {a.newValue}
+                      {['Ticket assigned', 'Ticket reassigned'].includes(a.action) ? (
+                        <p className="text-xs text-muted-foreground">
+                          {a.previousAgentName ?? 'Unassigned'} → {a.nextAgentName ?? 'Unassigned'}
                         </p>
+                      ) : (
+                        a.newValue && (
+                          <p className="break-all">
+                            {a.oldValue ? a.oldValue + ' → ' : ''}
+                            {a.newValue}
+                          </p>
+                        )
                       )}
                       <p>
                         {a.actor.name} · {formatDate(a.createdAt, true)}
@@ -247,35 +249,7 @@ export default function TicketDetailPage() {
                 <dt>Assigned agent</dt>
                 <dd>
                   {user?.role === 'admin' ? (
-                    <>
-                      <input
-                        className="input mb-2"
-                        aria-label="Search support agents"
-                        placeholder="Search agents…"
-                        value={agentSearch}
-                        onChange={(e) => setAgentSearch(e.target.value)}
-                      />
-                      <select
-                        aria-label="Assigned agent"
-                        className="select w-full"
-                        disabled={mutation.isPending}
-                        value={t.assignedAgentId ?? ''}
-                        onChange={(e) =>
-                          void update('/assign', { assignedAgentId: e.target.value || null })
-                        }
-                      >
-                        <option value="">Unassigned</option>
-                        {t.assignee && !agents.data?.items.some((a) => a.id === t.assignee!.id) && (
-                          <option value={t.assignee.id}>{t.assignee.name}</option>
-                        )}
-                        {agents.data?.items.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.name}
-                          </option>
-                        ))}
-                      </select>
-                      {agents.error && <InlineMessage error>{agents.error.message}</InlineMessage>}
-                    </>
+                    <TicketAssignment ticket={t} />
                   ) : (
                     (t.assignee?.name ?? 'Unassigned')
                   )}
