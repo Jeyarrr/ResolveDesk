@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import type { z } from 'zod';
-import type { Database, Executor } from '../db/connection.js';
+import type { Database, Executor, Transaction } from '../db/connection.js';
 import { activity, categories, comments, tickets, users, type Actor } from '../db/schema.js';
 import { AppError } from '../middleware/errors.js';
 import { permittedTicket } from '../repositories/tickets.js';
@@ -26,7 +26,7 @@ export const recordActivity = (
   db
     .insert(activity)
     .values({ ticketId, actorId: actor.id, action, oldValue, newValue, isInternal });
-export function ticketService(db: Database) {
+export function ticketService(db: Database | Transaction) {
   return {
     async create(actor: Actor, input: z.infer<typeof ticketInput>) {
       if (actor.role === 'agent')

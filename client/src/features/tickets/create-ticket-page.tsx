@@ -1,3 +1,4 @@
+import { uploadForm } from './attachment-form';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -12,6 +13,7 @@ import { createTicketSchema, type CreateTicketInput } from './schema';
 import { Button } from '../../components/ui/button';
 import { Card, FieldError, InlineMessage, PageHeader } from '../../components/shared/primitives';
 import { errorMessage } from '../../lib/utils';
+import { FilePicker, UploadProgress } from './attachments';
 
 export default function CreateTicketPage() {
   const { user } = useApp();
@@ -19,6 +21,10 @@ export default function CreateTicketPage() {
   const categories = useApi<Reference[]>('/ticket-categories');
   const mutation = useApiMutation<{ id: string }>();
   const [error, setError] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [submissionId, setSubmissionId] = useState(() => crypto.randomUUID());
+  const [progress, setProgress] = useState(0);
+  const [controller, setController] = useState<AbortController | null>(null);
   const {
     register,
     handleSubmit,
@@ -51,17 +57,26 @@ export default function CreateTicketPage() {
           <form
             className="p-6 pt-1 space-y-6"
             noValidate
+            onChange={() => setSubmissionId(crypto.randomUUID())}
             onSubmit={handleSubmit(async (values) => {
               setError('');
+              const cancel = new AbortController();
+              setController(cancel);
+              setProgress(0);
+              const body = {
+                subject: values.subject,
+                description: values.description,
+                categoryId: values.category,
+                priority: priorityValue(values.priority),
+              };
               try {
                 const ticket = await mutation.mutateAsync({
                   path: '/tickets',
-                  body: {
-                    subject: values.subject,
-                    description: values.description,
-                    categoryId: values.category,
-                    priority: priorityValue(values.priority),
-                  },
+                  body: files.length
+                    ? uploadForm(body, files, submissionId)
+                    : { ...body, submissionId },
+                  onProgress: setProgress,
+                  signal: cancel.signal,
                 });
                 navigate(`/tickets/${ticket.id}`, { state: { created: true } });
               } catch (e) {
@@ -144,9 +159,17 @@ export default function CreateTicketPage() {
               </p>
               <FieldError id="description-error" message={errors.description?.message} />
             </div>
-            <InlineMessage>
-              Attachments are not available yet. Secure file storage is planned for a later phase.
-            </InlineMessage>
+            <FilePicker
+              files={files}
+              onChange={(value) => {
+                setFiles(value);
+                setSubmissionId(crypto.randomUUID());
+              }}
+              disabled={isSubmitting}
+            />
+            {isSubmitting && files.length > 0 && (
+              <UploadProgress progress={progress} onCancel={() => controller?.abort()} />
+            )}
             {error && <InlineMessage error>{error}</InlineMessage>}
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5">
               <span className="text-xs text-muted-foreground">

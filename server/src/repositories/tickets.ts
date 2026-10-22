@@ -2,7 +2,15 @@ import { and, asc, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-or
 import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { z } from 'zod';
 import type { Executor } from '../db/connection.js';
-import { activity, categories, comments, tickets, users, type Actor } from '../db/schema.js';
+import {
+  activity,
+  categories,
+  comments,
+  conversationReads,
+  tickets,
+  users,
+  type Actor,
+} from '../db/schema.js';
 import type { ticketQuery } from '../validation/schemas.js';
 import { AppError } from '../middleware/errors.js';
 export function scope(actor: Actor): SQL {
@@ -100,7 +108,42 @@ export async function listTickets(db: Executor, actor: Actor, q: z.infer<typeof 
       .from(tickets)
       .where(where),
   ]);
-  return { items: rows, total: counts[0]?.count ?? 0, page: q.page, limit: q.limit };
+  const unread = rows.length
+    ? await db
+        .select({ ticketId: comments.ticketId, count: sql<number>`count(*)::int` })
+        .from(comments)
+        .innerJoin(tickets, eq(tickets.id, comments.ticketId))
+        .leftJoin(
+          conversationReads,
+          and(
+            eq(conversationReads.ticketId, comments.ticketId),
+            eq(conversationReads.userId, actor.id),
+          ),
+        )
+        .where(
+          and(
+            scope(actor),
+            sql`${comments.ticketId} IN (${sql.join(
+              rows.map((r) => sql`${r.id}::uuid`),
+              sql`,`,
+            )})`,
+            unreadCondition(actor),
+          ),
+        )
+        .groupBy(comments.ticketId)
+    : [];
+  return {
+    items: rows.map((row) => ({
+      ...row,
+      unreadCount: unread.find((r) => r.ticketId === row.id)?.count ?? 0,
+    })),
+    total: counts[0]?.count ?? 0,
+    page: q.page,
+    limit: q.limit,
+  };
+}
+export function unreadCondition(actor: Actor) {
+  return sql`${comments.authorId} <> ${actor.id} AND ${comments.position} > coalesce(${conversationReads.lastPosition}, 0) AND (${actor.role !== 'employee'} OR ${comments.isInternal} = false)`;
 }
 export async function ticketComments(db: Executor, actor: Actor, id: string) {
   await permittedTicket(db, actor, id);
@@ -112,10 +155,20 @@ export async function ticketComments(db: Executor, actor: Actor, id: string) {
       isInternal: comments.isInternal,
       createdAt: comments.createdAt,
       author: person(users),
+      authorRole: users.role,
+      position: comments.position,
+      isUnread: unreadCondition(actor),
     })
     .from(comments)
     .innerJoin(users, eq(users.id, comments.authorId))
     .innerJoin(tickets, eq(tickets.id, comments.ticketId))
+    .leftJoin(
+      conversationReads,
+      and(
+        eq(conversationReads.ticketId, comments.ticketId),
+        eq(conversationReads.userId, actor.id),
+      ),
+    )
     .where(
       and(
         eq(comments.ticketId, id),

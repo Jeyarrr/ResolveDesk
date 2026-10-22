@@ -1,5 +1,47 @@
 # Verification record
 
+## Phase 3 complete - October 22, 2026
+
+Implemented private attachments, enhanced public/internal conversations, persistent read cursors and support response templates, integrated with the existing lifecycle, assignment, escalation and workload workflows.
+
+| Check                        | Result                                                                                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Default Vitest               | 120 passed, 1 native-only test skipped; 15 files passed                                                                                       |
+| Native PostgreSQL            | 42 passed: 12 lifecycle, 15 assignment and 15 collaboration tests                                                                             |
+| Native PostgreSQL Playwright | 5 passed, including the complete employee/admin/agent workflow                                                                                |
+| Accessibility                | Axe checks passed on login, dashboards, forms, settings, escalation and the populated conversation                                            |
+| Responsive layout            | 375, 430, 768, 1366 and 1920px checks passed; conversation screenshots captured at every width and visually inspected at mobile/desktop sizes |
+| TypeScript                   | Client, server and tooling passed                                                                                                             |
+| ESLint                       | Passed without warnings                                                                                                                       |
+| Production build             | Client and server passed                                                                                                                      |
+| Formatting                   | Prettier check passed                                                                                                                         |
+| Migration generation         | No schema drift after 0005                                                                                                                    |
+| Local migration              | Reviewed additive 0005 applied successfully                                                                                                   |
+| Storage audit                | Dry-run: zero orphaned, deleted or missing objects; no cleanup performed                                                                      |
+| Dependency audit             | Production dependency audit: zero vulnerabilities reported                                                                                    |
+| Publishable-file scan        | 154 files checked; no actual database URL, session secret or private key found                                                                |
+| Git review                   | Diff whitespace check passed; environment, uploads and temporary reports ignored                                                              |
+
+### Preservation
+
+Every original column value and row count matched the pre-change SHA-256 snapshot after migration: 4 users, 6 departments, 7 categories, 1 ticket, 2 comments, 4 activity records, 9 sessions and 0 escalations. The existing server environment bytes also matched. IDs, emails, password hashes, roles, department links, timestamps, ticket relationships and sessions were preserved. Jayr remains admin/Administration, Mon employee/General, and George agent/Human Resources. No existing account was replaced or removed.
+
+The four new tables were empty on the application database after migration. All automated writes used isolated databases and private temporary directories. Latest native databases are resolvedesk_test_1792683879915_0df68ae2, resolvedesk_test_1792683887750_71f4a6e4 and resolvedesk_test_1792683892499_c92540b1. Browser validation used resolvedesk_test_1792683586009_509f81ed. They are retained locally for inspection, not committed. Application logins were not exercised during the preservation comparison, to avoid changing last-login values or sessions; equivalent seeded role accounts were exercised in isolation.
+
+### Coverage and fixes
+
+Attachment tests cover real signatures, safe metadata/headers, anonymous and unrelated-user denial, parent-comment visibility, employee internal-file denial, uploader/admin deletion, missing files, traversal, invalid UTF-8/markup, MIME mismatch, empty/oversized/excess files, malformed multipart, aggregate size, CSRF, mass assignment, exact size-boundary acceptance, atomic ticket/message/files, simultaneous duplicate retries, differing retry content, and database/disk/cancellation compensation. App-instance restart tests retain files, messages and read state.
+
+Conversation tests cover authenticated authorship/roles, public/internal separation, own-message and hidden-note exclusion from unread counts, monotonic read cursors, invalid/inaccessible positions, duplicate replies, required text, shared templates, owner/admin permissions, archival and loss of access after reassignment. Frontend tests cover file selection/removal/errors, delete confirmation/cancellation, failed downloads, template insertion without sending, internal submissions and employee controls.
+
+The browser workflow creates a ticket with a PNG, opens it from the list, assigns/reassigns it, escalates and resolves the escalation, creates/inserts a saved reply, posts internal/public files, denies an employee's direct internal-file download, downloads a public file, and completes resolve/reopen/re-resolve/confirm closure. Existing administration, reports, authentication, themes and knowledge-guide checks remain green. Fixed ticket-list navigation to use UUIDs while retaining RD display numbers. Tightened private storage path checks and kept long template titles out of narrow action-button text.
+
+### Boundaries
+
+Automated cancellation coverage injects cancellation at the service boundary and tests malformed requests; a physical network disconnection and operating-system crash were not induced. The documented orphan audit addresses crash leftovers but cleanup mode was not run on the application storage. Signature checks do not constitute malware scanning or full image/PDF decoding. Nested threads, conversation pagination, real-time delivery, SLA automation, cloud storage and deployment checks remain outside Phase 3. The chronological conversation is intentional and satisfies the supported thread model.
+
+See [attachment architecture, API contracts, migration steps and manual walkthrough](attachments-conversations.md). The implementation is ready for Phase 4 development within these documented local-development limits. No Git commit, push or deployment was performed.
+
 ## Phase 3.2 — October 22, 2026
 
 Implemented assignment/reassignment, separate escalation records and an administrator queue, and paginated SQL-backed active-agent workloads. The existing local PostgreSQL configuration and Phase 3.1 lifecycle service are retained.

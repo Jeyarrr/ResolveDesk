@@ -2,7 +2,7 @@
 
 PostgreSQL is the source of truth. Drizzle definitions are in server/src/db/schema.ts; generated SQL and snapshots are in server/drizzle.
 
-The current runtime uses local PostgreSQL managed in pgAdmin 4, with the existing `DATABASE_URL` and `DB_SSL=false`. No cloud synchronization or Neon configuration is part of Phase 3.2.
+The current runtime uses local PostgreSQL managed in pgAdmin 4, with the existing `DATABASE_URL` and `DB_SSL=false`. No cloud synchronization or Neon configuration is part of Phase 3.
 
 | Table             | Fields and relationships                                                                                                                                       |
 | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -27,6 +27,18 @@ All timestamps use PostgreSQL timestamptz and APIs serialize ISO UTC dates. UUID
 - Check constraint: resolved/closed statuses require resolved_at; only closed has closed_at.
 - Indexes for requester/assignee + updated_at, status/priority, category, created_at, comment/activity chronology, session token/expiry/user, and user department/role/status.
 - Assignment eligibility is enforced transactionally by the service; direct database writers must preserve that invariant.
+
+## Phase 3 attachments and conversations
+
+Migration `0005_bright_wraith.sql` adds:
+
+- `ticket_attachments`: ticket/comment/uploader/submission foreign keys, UUID storage key, safe display filename, MIME, byte size, visibility, timestamps and deletion tombstone. Files remain on private disk. Checks restrict MIME and size; a composite foreign key prevents linking a comment from another ticket.
+- `ticket_submissions`: caller-supplied UUID, authenticated actor, operation kind, content fingerprint, committed ticket ID and replay result. The primary key serializes duplicate submissions.
+- `conversation_reads`: composite ticket/user primary key, nonnegative monotonic position and update timestamp.
+- `response_templates`: title, body, author, active flag and timestamps; length constraints and active/title index.
+- `ticket_comments.position`: generated identity with unique and ticket/position indexes; existing comments receive positions while all original fields remain intact. The ticket/comment unique index must exist before the attachment composite foreign key.
+
+All new foreign keys restrict deletion. No role or status enum changes, account replacement, credential changes or data resets are involved. Services enforce public/internal visibility and same-ticket attachment consistency. SQL access is parameterized and uses the existing pool. See [storage transaction boundaries](attachments-conversations.md).
 
 ## Migrations
 

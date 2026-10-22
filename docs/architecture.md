@@ -1,5 +1,13 @@
 # Application architecture
 
+## Phase 3 attachment and collaboration flow
+
+React forms send credentialed, CSRF-protected multipart requests through the existing API and query hooks. The collaboration controller authenticates and checks ticket access before bounded parsing. The upload service validates filenames, limits and detected file signatures. The attachment service coordinates existing ticket/comment services, PostgreSQL transactions and the private storage adapter. Metadata commits only after file writes; ordinary failures compensate on disk. Database tombstones revoke access before physical deletion.
+
+Conversation reads and saved replies use focused services and existing comments. Read positions increase monotonically under a ticket lock; unread counts exclude own posts and invisible notes. Lists batch counts in SQL. Template ownership is checked on every mutation. The frontend preserves chronological messages and refreshes TanStack Query after mutations or window focus.
+
+See [storage, endpoints, limits and maintenance](attachments-conversations.md).
+
 ## Phase 3.2 support operations
 
 The existing ticket service owns assignment/reassignment, locking eligible agents and tickets before a version-checked update and activity insert. Assignment versions are separate from lifecycle versions. The lifecycle service remains unchanged. `services/escalations.ts` owns scoped escalation reads and transactional requests/acknowledgement/resolution; `services/workloads.ts` aggregates current ticket assignments for active agents. All APIs reuse session authentication, CSRF checks and centralized errors.
@@ -10,7 +18,7 @@ Ticket details reuse Dialog, Button, Card and query hooks for assignment and esc
 
 The existing React application retains its shell, themes, reusable controls, ticket table, forms, charts, and role navigation. TanStack Query owns remote state. Local storage is used only for appearance/sidebar preferences; legacy mock modules are retained as regression fixtures and are not used for live tickets or authentication.
 
-The API client includes credentials, sends the in-memory CSRF token for JSON mutations, supports cancellation, and exposes safe errors. Protected queries use a common cache prefix. Login/logout cancel and clear caches. Unauthorized responses clear protected data and redirect through the session gate. Session restoration loads the database-backed profile.
+The API client includes credentials, sends the in-memory CSRF token for JSON and permitted multipart mutations, supports cancellation, and exposes safe errors. Protected queries use a common cache prefix. Login/logout cancel and clear caches. Unauthorized responses clear protected data and redirect through the session gate. Session restoration loads the database-backed profile.
 
 ## Backend layers
 
@@ -33,7 +41,7 @@ User administration serializes changes with a PostgreSQL table lock so simultane
 
 ## Scope and limitations
 
-Role permissions are enforced in the API and query predicates. Employee knowledge content is currently static, clearly labeled sample material. Notification delivery, uploads, SLA policies, and recovery are unavailable. Reports use database aggregates; current resolution times describe the latest completed lifecycle, not historical reopen cycles.
+Role permissions are enforced in the API and query predicates. Employee knowledge content is currently static, clearly labeled sample material. Notification delivery, SLA policies, and recovery are unavailable. Attachment validation does not include malware scanning. Reports use database aggregates; current resolution times describe the latest completed lifecycle, not historical reopen cycles.
 
 Tests exercise the real API against isolated PGlite and separate local native PostgreSQL databases. Native lifecycle tests establish multi-connection locking behavior on the local server. Browser tests use separate ports and databases. Before production, verify hosted database connectivity/TLS, migrations, cookie/CORS behavior, proxy trust, rate limiting across replicas, backups, logging retention, and monitoring.
 

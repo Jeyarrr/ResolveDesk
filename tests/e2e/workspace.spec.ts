@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 async function login(page: Page, role: 'admin' | 'agent' | 'employee' = 'admin') {
   await page.goto('/login');
   await page.getByLabel('Email address').fill(role + '@resolvedesk.example');
@@ -30,14 +31,18 @@ test('real login, recovery unavailable, refresh, logout and route guards', async
   await expect(page).toHaveURL(/login$/);
 });
 test('database ticket workflow across employee, admin and agent sessions', async ({ page }) => {
-  test.setTimeout(120000);
+  test.setTimeout(240000);
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV1cAAAAASUVORK5CYII=',
+    'base64',
+  );
   await login(page, 'employee');
   await page.goto('/tickets/new');
   await page.getByRole('button', { name: 'Submit ticket' }).click();
   await expect(page.getByText('Use at least 5 characters.')).toBeVisible();
   await page
     .getByRole('textbox', { name: 'Subject', exact: true })
-    .fill('Browser integration VPN issue');
+    .fill('Browser integration printer issue');
   await page
     .getByRole('textbox', { name: 'Description', exact: true })
     .fill('The company VPN disconnects during calls and blocks the project workspace.');
@@ -45,11 +50,26 @@ test('database ticket workflow across employee, admin and agent sessions', async
     .getByRole('combobox', { name: 'Category', exact: true })
     .selectOption({ label: 'Network' });
   await page.getByRole('combobox', { name: 'Priority', exact: true }).selectOption('High');
+  await page
+    .getByLabel('Attach files', { exact: true })
+    .setInputFiles({ name: 'printer-error.png', mimeType: 'image/png', buffer: png });
   await page.getByRole('button', { name: 'Submit ticket' }).click();
-  await expect(page.getByRole('heading', { name: 'Browser integration VPN issue' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Browser integration printer issue' }),
+  ).toBeVisible();
   const url = page.url();
+  const ticketId = url.split('/').at(-1)!;
+  await expect(page.getByRole('button', { name: 'Download printer-error.png' })).toBeVisible();
+  await page.goto('/tickets/mine');
+  await page
+    .getByRole('link', { name: /Browser integration printer issue/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(url);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Browser integration VPN issue' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Browser integration printer issue' }),
+  ).toBeVisible();
   await logout(page);
   await login(page);
   await page.goto(url);
@@ -88,7 +108,7 @@ test('database ticket workflow across employee, admin and agent sessions', async
   await login(page);
   await page.goto('/escalations');
   await expect(page.getByRole('table')).toContainText('George');
-  await page.getByLabel('Search escalated tickets').fill('Browser integration VPN issue');
+  await page.getByLabel('Search escalated tickets').fill('Browser integration printer issue');
   await page.getByRole('button', { name: 'Acknowledge', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm escalation update' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -106,16 +126,63 @@ test('database ticket workflow across employee, admin and agent sessions', async
   await page.goto(url);
   await page.getByLabel('Ticket status', { exact: true }).selectOption('in_progress');
   await expect(page.getByLabel('Ticket status', { exact: true })).toBeEnabled();
+  await page.goto('/settings');
+  await page.getByRole('button', { name: 'New saved reply', exact: true }).click();
+  await page.getByLabel('Template title').fill('Printer network check');
+  await page
+    .getByLabel('Response text')
+    .fill('Please confirm that the printer is connected to the office Wi-Fi.');
+  await page.getByRole('button', { name: 'Save response template' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.goto(url);
+  await page
+    .getByLabel('Insert saved reply', { exact: true })
+    .selectOption({ label: 'Printer network check' });
+  await expect(page.getByLabel('Add a reply')).toHaveValue(
+    'Please confirm that the printer is connected to the office Wi-Fi.',
+  );
+  await expect(
+    page
+      .getByRole('article')
+      .getByText('Please confirm that the printer is connected to the office Wi-Fi.'),
+  ).toHaveCount(0);
   await page.getByLabel('Add a reply').fill('Private agent investigation');
   await page.getByLabel('Internal note (support staff only)').check();
+  const composer = page.locator('form').filter({ has: page.getByLabel('Add a reply') });
+  await composer.getByLabel('Attach files', { exact: true }).setInputFiles({
+    name: 'private-diagnostic.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('Private printer diagnostic details'),
+  });
   await page.getByRole('button', { name: 'Post internal note' }).click();
   await expect(
     page.getByRole('article').getByText('Private agent investigation', { exact: true }),
   ).toBeVisible();
+  expect(
+    (await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze())
+      .violations,
+  ).toEqual([]);
+  for (const width of [375, 430, 768, 1366, 1920]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: `tmp/phase3-conversation-${width}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const privateFiles = await (
+    await page.request.get(`/api/tickets/${ticketId}/attachments`)
+  ).json();
+  const internalFileId = privateFiles.data.find((a: { isInternal: boolean }) => a.isInternal).id;
   await page.getByLabel('Internal note (support staff only)').uncheck();
   await page
     .getByLabel('Add a reply')
     .fill('Updated the VPN configuration and verified connectivity.');
+  await composer.getByLabel('Attach files', { exact: true }).setInputFiles({
+    name: 'public-instructions.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('Reconnect the printer to the office network.'),
+  });
   await page.getByRole('button', { name: 'Post reply', exact: true }).click();
   await expect(
     page.getByRole('article').getByText('Updated the VPN configuration and verified connectivity.'),
@@ -140,6 +207,24 @@ test('database ticket workflow across employee, admin and agent sessions', async
     page.getByRole('article').getByText('Updated the VPN configuration and verified connectivity.'),
   ).toBeVisible();
   await expect(page.getByText('Private agent investigation')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Download private-diagnostic.txt' })).toHaveCount(
+    0,
+  );
+  expect((await page.request.get(`/api/attachments/${internalFileId}/download`)).status()).toBe(
+    404,
+  );
+  const downloading = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download public-instructions.txt' }).click();
+  expect((await downloading).suggestedFilename()).toBe('public-instructions.txt');
+  await page
+    .getByLabel('Add a reply')
+    .fill('I have tried reconnecting the printer, but it still fails.');
+  await page.getByRole('button', { name: 'Post reply', exact: true }).click();
+  await expect(
+    page
+      .getByRole('article')
+      .getByText('I have tried reconnecting the printer, but it still fails.'),
+  ).toBeVisible();
   await expect(page.getByLabel('Ticket status', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Resolution submitted', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Mark as resolved', exact: true })).toHaveCount(0);

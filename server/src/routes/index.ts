@@ -6,6 +6,7 @@ import type { Config } from '../config/env.js';
 import { authService } from '../services/auth.js';
 import { security, requireRole } from '../middleware/auth.js';
 import { controllers } from '../controllers/api-controller.js';
+import { collaborationController } from '../controllers/collaboration-controller.js';
 import { loginInput } from '../validation/schemas.js';
 import { profile } from '../repositories/users.js';
 export function apiRouter(db: Database, config: Config) {
@@ -13,6 +14,7 @@ export function apiRouter(db: Database, config: Config) {
     auth = authService(db, config),
     guard = security(auth, config),
     c = controllers(db);
+  const collaboration = collaborationController(db, config);
   router.use((_req, res, next) => {
     res.set('Cache-Control', 'no-store');
     next();
@@ -63,7 +65,8 @@ export function apiRouter(db: Database, config: Config) {
     res.json({ success: true, data: null });
   });
   router.get('/tickets', c.tickets);
-  router.post('/tickets', c.createTicket);
+  router.get('/attachment-limits', collaboration.limits);
+  router.post('/tickets', collaboration.submit('ticket'));
   router.get('/tickets/:id', c.ticket);
   router.patch('/tickets/:id', c.patchTicket);
   router.patch('/tickets/:id/status', c.status);
@@ -73,7 +76,13 @@ export function apiRouter(db: Database, config: Config) {
   router.patch('/tickets/:id/reopen', c.reopen);
   router.patch('/tickets/:id/assign', requireRole('admin'), c.assign);
   router.get('/tickets/:id/comments', c.comments);
-  router.post('/tickets/:id/comments', c.comment);
+  router.get('/tickets/:id/conversation-state', c.conversationState);
+  router.post('/tickets/:id/read', c.markRead);
+  router.post('/tickets/:id/comments', collaboration.submit('comment'));
+  router.get('/tickets/:id/attachments', collaboration.list);
+  router.post('/tickets/:id/attachments', collaboration.submit('attachment'));
+  router.get('/attachments/:id/download', collaboration.download);
+  router.delete('/attachments/:id', collaboration.remove);
   router.get('/tickets/:id/activity', c.activity);
   router.get('/tickets/:id/escalations', requireRole('agent', 'admin'), c.ticketEscalations);
   router.post('/tickets/:id/escalations', requireRole('agent'), c.createEscalation);
@@ -95,5 +104,9 @@ export function apiRouter(db: Database, config: Config) {
     router.patch(`/${path}/:id`, requireRole('admin'), ref.update);
   }
   router.get('/analytics/dashboard', c.analytics);
+  router.get('/response-templates', requireRole('agent', 'admin'), c.templates);
+  router.post('/response-templates', requireRole('agent', 'admin'), c.createTemplate);
+  router.patch('/response-templates/:id', requireRole('agent', 'admin'), c.updateTemplate);
+  router.delete('/response-templates/:id', requireRole('agent', 'admin'), c.archiveTemplate);
   return router;
 }

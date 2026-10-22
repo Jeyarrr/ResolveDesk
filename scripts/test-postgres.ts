@@ -15,7 +15,13 @@ if (
     'This runner requires the existing local development PostgreSQL configuration (DB_SSL=false).',
   );
 const browser = process.argv[2] === 'browser';
-const suites = browser ? [null] : ['server/src/lifecycle.test.ts', 'server/src/assignment.test.ts'];
+const suites = browser
+  ? [null]
+  : [
+      'server/src/lifecycle.test.ts',
+      'server/src/assignment.test.ts',
+      'server/src/collaboration.test.ts',
+    ];
 for (const suite of suites) {
   // Separate suites preserve seeded identities without sharing credentials or mutating another suite's records.
   const name = `resolvedesk_test_${Date.now()}_${randomBytes(4).toString('hex')}`;

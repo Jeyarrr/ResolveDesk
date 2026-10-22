@@ -7,6 +7,7 @@ import * as input from '../validation/schemas.js';
 import { ticketService } from '../services/tickets.js';
 import { escalationService } from '../services/escalations.js';
 import { agentWorkloads } from '../services/workloads.js';
+import { conversationService } from '../services/conversations.js';
 import { lifecycleService, lifecycleActions } from '../services/lifecycle.js';
 import { adminService } from '../services/admin.js';
 import { analytics } from '../services/analytics.js';
@@ -21,6 +22,7 @@ import {
 import { AppError } from '../middleware/errors.js';
 export function controllers(db: Database) {
   const service = ticketService(db),
+    conversation = conversationService(db),
     escalation = escalationService(db),
     admin = adminService(db),
     lifecycle = lifecycleService(db);
@@ -31,6 +33,12 @@ export function controllers(db: Database) {
     };
   const id = (req: Parameters<RequestHandler>[0]) => input.uuid.parse(req.params.id);
   return {
+    conversationState: wrap((req) => conversation.state(req.actor, id(req))),
+    markRead: wrap((req) => conversation.read(req.actor, id(req), req.body)),
+    templates: wrap((req) => conversation.templates(req.actor, req.query)),
+    createTemplate: wrap((req) => conversation.saveTemplate(req.actor, null, req.body), 201),
+    updateTemplate: wrap((req) => conversation.saveTemplate(req.actor, id(req), req.body)),
+    archiveTemplate: wrap((req) => conversation.saveTemplate(req.actor, id(req), req.body, true)),
     workloads: wrap((req) =>
       agentWorkloads(db, req.actor, input.pagination.strict().parse(req.query)),
     ),

@@ -11,6 +11,9 @@ import {
   bigint,
   check,
   integer,
+  jsonb,
+  primaryKey,
+  foreignKey,
 } from 'drizzle-orm/pg-core';
 export const role = pgEnum('role', ['employee', 'agent', 'admin']);
 export const accountStatus = pgEnum('account_status', ['active', 'inactive', 'suspended']);
@@ -132,9 +135,14 @@ export const comments = pgTable(
       .references(() => users.id, { onDelete: 'restrict' }),
     message: text('message').notNull(),
     isInternal: boolean('is_internal').notNull().default(false),
+    position: bigint('position', { mode: 'number' }).generatedAlwaysAsIdentity().notNull().unique(),
     ...times(),
   },
-  (t) => [index('comments_ticket_created_idx').on(t.ticketId, t.createdAt)],
+  (t) => [
+    index('comments_ticket_created_idx').on(t.ticketId, t.createdAt),
+    uniqueIndex('comments_ticket_id_unique').on(t.ticketId, t.id),
+    index('comments_ticket_position_idx').on(t.ticketId, t.position),
+  ],
 );
 export const activity = pgTable(
   'ticket_activity',
@@ -207,3 +215,88 @@ export const escalations = pgTable(
   ],
 );
 export type Actor = typeof users.$inferSelect;
+export const submissions = pgTable('ticket_submissions', {
+  id: uuid('id').primaryKey(),
+  actorId: uuid('actor_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
+  ticketId: uuid('ticket_id').references(() => tickets.id, { onDelete: 'restrict' }),
+  kind: text('kind').notNull(),
+  fingerprint: text('fingerprint').notNull(),
+  result: jsonb('result').$type<unknown>(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+export const attachments = pgTable(
+  'ticket_attachments',
+  {
+    id: id(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    commentId: uuid('comment_id'),
+    uploadedBy: uuid('uploaded_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    submissionId: uuid('submission_id')
+      .notNull()
+      .references(() => submissions.id, { onDelete: 'restrict' }),
+    originalFilename: text('original_filename').notNull(),
+    storageKey: uuid('storage_key').notNull().unique(),
+    mimeType: text('mime_type').notNull(),
+    fileSize: integer('file_size').notNull(),
+    isInternal: boolean('is_internal').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.ticketId, t.commentId],
+      foreignColumns: [comments.ticketId, comments.id],
+      name: 'attachments_comment_ticket_fk',
+    }).onDelete('restrict'),
+    index('attachments_ticket_created_idx').on(t.ticketId, t.createdAt),
+    index('attachments_comment_idx').on(t.commentId),
+    check('attachment_size_valid', sql`${t.fileSize} > 0 AND ${t.fileSize} <= 10485760`),
+    check(
+      'attachment_mime_valid',
+      sql`${t.mimeType} IN ('image/png','image/jpeg','image/webp','application/pdf','text/plain')`,
+    ),
+  ],
+);
+export const conversationReads = pgTable(
+  'conversation_reads',
+  {
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    lastPosition: bigint('last_position', { mode: 'number' }).notNull().default(0),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.ticketId, t.userId] }),
+    check('read_position_nonnegative', sql`${t.lastPosition} >= 0`),
+  ],
+);
+export const responseTemplates = pgTable(
+  'response_templates',
+  {
+    id: id(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    active: boolean('active').notNull().default(true),
+    ...times(),
+  },
+  (t) => [
+    index('templates_active_title_idx').on(t.active, t.title),
+    check(
+      'template_lengths',
+      sql`length(trim(${t.title})) BETWEEN 2 AND 100 AND length(trim(${t.body})) BETWEEN 1 AND 5000`,
+    ),
+  ],
+);

@@ -42,6 +42,7 @@ export interface ApiTicket {
   closer: Person | null;
   lifecycleVersion: number;
   assignmentVersion: number;
+  unreadCount?: number;
   lifecycleActions?: {
     statusTransitions: ApiStatus[];
     resolve: boolean;
@@ -57,6 +58,30 @@ export interface Comment {
   message: string;
   isInternal: boolean;
   createdAt: string;
+  position: number;
+  authorRole: 'admin' | 'agent' | 'employee';
+  isUnread: boolean;
+}
+export interface Attachment {
+  id: string;
+  ticketId: string;
+  commentId: string | null;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedBy: string;
+  uploaderName: string;
+  isInternal: boolean;
+  createdAt: string;
+  canDelete: boolean;
+}
+export interface ResponseTemplate {
+  id: string;
+  title: string;
+  body: string;
+  createdBy: string;
+  authorName: string;
+  canManage: boolean;
 }
 export interface Activity {
   id: string;
@@ -124,7 +149,7 @@ export const priorityValue = (value: string) => value.toLowerCase();
 export type TicketRow = Pick<
   Ticket,
   'id' | 'subject' | 'category' | 'priority' | 'status' | 'assigneeId' | 'createdAt' | 'updatedAt'
-> & { ticketNumber?: number };
+> & { ticketNumber?: number; unreadCount?: number };
 export function displayTicket(t: ApiTicket): TicketRow {
   return {
     ...t,

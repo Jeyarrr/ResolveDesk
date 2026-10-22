@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Send } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useApp } from '../../app/context';
 import { useApi, useApiMutation } from '../../hooks/use-api';
 import {
@@ -8,7 +8,6 @@ import {
   priorityLabels,
   displayPerson,
   type ApiTicket,
-  type Comment,
   type Activity,
   type Reference,
 } from '../../services/contracts';
@@ -19,16 +18,15 @@ import { Button } from '../../components/ui/button';
 import { TicketLifecycle } from './ticket-lifecycle';
 import { TicketAssignment } from './ticket-assignment';
 import { TicketEscalations } from './ticket-escalations';
+import { TicketConversation } from './ticket-conversation';
+import { TicketAttachments } from './attachments';
 export default function TicketDetailPage() {
   const { id } = useParams();
   const { user } = useApp();
   const ticket = useApi<ApiTicket>('/tickets/' + id);
-  const comments = useApi<Comment[]>('/tickets/' + id + '/comments');
   const activity = useApi<Activity[]>('/tickets/' + id + '/activity');
   const categories = useApi<Reference[]>('/ticket-categories', user?.role === 'admin');
   const mutation = useApiMutation();
-  const [reply, setReply] = useState('');
-  const [internal, setInternal] = useState(false);
   const [message, setMessage] = useState('');
   if (!ticket.data) return <QueryState query={ticket} />;
   const t = ticket.data;
@@ -74,9 +72,6 @@ export default function TicketDetailPage() {
             <p className="whitespace-pre-wrap break-words px-6 pb-6 text-sm leading-7 text-muted-foreground">
               {t.description}
             </p>
-            <div className="border-t border-border px-6 py-5 text-xs text-muted-foreground">
-              Attachments are not available until secure file storage is configured.
-            </div>
           </Card>
           {manageable && <TicketEscalations key={t.id} ticket={t} />}
           {user?.role === 'admin' && (
@@ -133,73 +128,8 @@ export default function TicketDetailPage() {
               </form>
             </Card>
           )}
-          <Card
-            title="Conversation"
-            subtitle="Replies are saved to this ticket. Internal notes are visible only to authorized support staff."
-          >
-            <div className="px-6 pb-6 space-y-5">
-              <QueryState query={comments} />
-              {comments.data?.map((c) => (
-                <article key={c.id} className="comment">
-                  <Avatar user={displayPerson(c.author)} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-medium">{c.author.name}</h3>
-                      {c.isInternal && <Badge value="Internal note" />}
-                      <time className="text-[11px] text-muted-foreground">
-                        {formatDate(c.createdAt, true)}
-                      </time>
-                    </div>
-                    <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">
-                      {c.message}
-                    </p>
-                  </div>
-                </article>
-              ))}
-              {comments.data?.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  No replies yet. Start the conversation below.
-                </p>
-              )}
-              <form
-                className="border-t border-border pt-5"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (await update('/comments', { message: reply, isInternal: internal }, 'POST'))
-                    setReply('');
-                }}
-              >
-                <label htmlFor="reply" className="label">
-                  Add a reply
-                </label>
-                <textarea
-                  id="reply"
-                  className="input"
-                  rows={4}
-                  maxLength={5000}
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  required
-                />
-                {manageable && (
-                  <label className="my-3 flex gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={internal}
-                      onChange={(e) => setInternal(e.target.checked)}
-                    />
-                    Internal note (support staff only)
-                  </label>
-                )}
-                <div className="mt-3 flex justify-end">
-                  <Button disabled={mutation.isPending}>
-                    <Send />
-                    {internal ? 'Post internal note' : 'Post reply'}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </Card>
+          <TicketAttachments key={`files-${t.id}`} ticketId={t.id} />
+          <TicketConversation key={`conversation-${t.id}`} ticketId={t.id} />
           <Card title="Activity & status history">
             <QueryState query={activity} />
             <ol className="timeline">

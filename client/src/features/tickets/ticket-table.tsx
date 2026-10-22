@@ -43,14 +43,16 @@ export function TicketTable({
             return (
               <tr key={'ticketNumber' in ticket ? `RD-${ticket.ticketNumber}` : ticket.id}>
                 <td>
-                  <Link
-                    className="ticket-subject"
-                    to={`/tickets/${'ticketNumber' in ticket ? `RD-${ticket.ticketNumber}` : ticket.id}`}
-                  >
+                  <Link className="ticket-subject" to={`/tickets/${ticket.id}`}>
                     <span className="ticket-id">
                       {'ticketNumber' in ticket ? `RD-${ticket.ticketNumber}` : ticket.id}
                     </span>
                     <strong>{ticket.subject}</strong>
+                    {!!ticket.unreadCount && (
+                      <span className="text-xs text-primary">
+                        {ticket.unreadCount} unread replies
+                      </span>
+                    )}
                   </Link>
                 </td>
                 {!compact && <td>{ticket.category}</td>}
@@ -71,7 +73,7 @@ export function TicketTable({
                 <td>
                   <Link
                     className="table-open"
-                    to={`/tickets/${'ticketNumber' in ticket ? `RD-${ticket.ticketNumber}` : ticket.id}`}
+                    to={`/tickets/${ticket.id}`}
                     aria-label={`Open ${'ticketNumber' in ticket ? `RD-${ticket.ticketNumber}` : ticket.id}`}
                   >
                     <ChevronRight size={16} />

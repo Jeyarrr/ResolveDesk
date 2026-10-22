@@ -25,11 +25,13 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 
 ## Development status
 
-**Phase 3.2: Advanced Ticket Assignment, Escalation & Agent Workload Management.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
+**Phase 3: Ticket workflows, private attachments and support collaboration.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
 
 Phase 3.1 adds structured resolution summaries, employee confirmation, reasoned reopening, audited administrator closure/reopening, lifecycle progress, and version checks for conflicting requests. See the [lifecycle rules and walkthrough](docs/ticket-lifecycle.md).
 
 Phase 3.2 adds confirmed assignment/reassignment with reasons and conflict protection, unassigned filtering, private agent escalations, an administrator escalation queue, and SQL-backed workload counts. See [assignment and escalation rules, APIs, and walkthrough](docs/assignment-escalation.md). Existing lifecycle behavior remains available.
+
+Phase 3.3 adds private file uploads and guarded downloads. Phase 3.4 adds attachment-enabled conversations, persistent unread tracking and saved replies. Phase 3.5 integrates these with lifecycle, assignment and escalation workflows. See the [attachment and collaboration guide](docs/attachments-conversations.md) for configuration, APIs, security boundaries and a three-role walkthrough.
 
 ## Objectives and functionality
 
@@ -37,14 +39,16 @@ Phase 3.2 adds confirmed assignment/reassignment with reasons and conflict prote
 - Support agents manage assigned tickets, follow status transitions, and add internal notes.
 - Administrators manage organizational tickets, assignments, priorities, accounts, departments, and categories.
 - Database sessions, Argon2id password hashing, CSRF protection, role checks, and object-level authorization.
-- Persistent conversations and transactional ticket activity history.
+- Persistent public conversations, private support notes, database read cursors and transactional ticket activity history.
+- Private PNG/JPG/WEBP/PDF/TXT attachments on tickets and messages, with upload progress, cancellation and authorized downloads/deletion.
+- Shared saved replies, editable before sending, managed by agents and administrators.
 - Audited reassignment, separate escalation history, and active agent workload information before assignment.
 - Resolution summaries, resolving and closing actors, employee confirmation, and complete reopening history.
 - Server pagination, search, category/priority/status filtering, and sorting.
 - Role-scoped dashboards and database reports, trends, status and priority distributions.
 - Responsive navigation, dark/light themes, keyboard navigation, and sample knowledge guides.
 
-**Deferred:** password recovery/email invitations, production account onboarding, file uploads, real-time notifications, SLA automation, MFA, advanced analytics, and the knowledge base backend. Screens explicitly describe availability. No public registration or demo role bypass exists.
+**Deferred:** password recovery/email invitations, production account onboarding, real-time notifications, SLA automation, MFA, advanced analytics, and the knowledge base backend. Screens explicitly describe availability. No public registration or demo role bypass exists.
 
 ## Stack and architecture
 
@@ -59,7 +63,7 @@ Browser → React/TanStack Query → credentialed Express REST API → permissio
 
 ## Local setup
 
-Requires Node.js 24+, npm 10+, and local PostgreSQL. Existing installations should keep their working `server/.env` and database; no reset or reseeding is needed for Phase 3.2.
+Requires Node.js 24+, npm 10+, and local PostgreSQL. Existing installations should keep their working `server/.env` and database; no reset or reseeding is needed for Phase 3.
 
 1. Install from the repository root:
 
@@ -88,6 +92,8 @@ For schema changes, edit `server/src/db/schema.ts`, run `npm run db:generate -w 
 Phase 3.1 migration `0002_sticky_garia.sql` adds resolution metadata and lifecycle versions to tickets, and explanations/version uniqueness to existing activity records. It preserves existing users, credentials, sessions, tickets, and history. No new table or status is introduced. Review migrations before applying them; review/approval is required for potentially destructive changes.
 
 Phase 3.2 migrations `0003_gray_mysterio.sql` and `0004_tricky_zzzax.sql` add assignment versions and a separate escalation table with constraints and indexes. Existing records and local connection settings are preserved. Ticket statuses and account roles are unchanged.
+
+Phase 3 migration `0005_bright_wraith.sql` adds attachment metadata, idempotent submission records, conversation read positions and saved replies. It adds a generated position to existing comments without replacing their contents or relationships. Keep the reviewed unique-index-before-foreign-key order. Existing installations only migrate; do not reseed.
 
 4. For initial **development** accounts, set three different strong passwords (12–128 characters) in ignored `server/.env`:
 
@@ -142,6 +148,8 @@ This hashes the supplied password, activates the account, and revokes its sessio
 | COOKIE_SAME_SITE | lax default; none for genuinely cross-site HTTPS deployment             |
 | TRUST_PROXY      | Trusted reverse-proxy hop count, default 0; configure for actual host   |
 
+Private attachment defaults require no changes to an existing environment: `UPLOAD_DIR=uploads`, `UPLOAD_MAX_FILE_BYTES=10485760`, `UPLOAD_MAX_FILES=5`, and `UPLOAD_MAX_REQUEST_BYTES=53477376`. Relative storage paths resolve from the repository root. Keep the directory private and Git-ignored; custom paths need equivalent exclusions. Limits can be lowered, up to the supported 10 MB/file and 5 files/request ceilings. See [storage maintenance](docs/attachments-conversations.md#storage-and-maintenance).
+
 Frontend: `VITE_API_URL` is a public API base ending in `/api`. Default `/api` uses the dev proxy. Optional `API_PROXY_TARGET` selects the development proxy backend. Server secrets never belong in VITE variables.
 
 ## Roles and APIs
@@ -175,8 +183,8 @@ These tests validate local PostgreSQL multi-connection contention. Hosted networ
 
 ## Roadmap and repository safety
 
-Next is Phase 3.3: file attachments. Phase 3.4 covers advanced conversations; Phase 4 covers real-time notifications and SLA automation. Future deployment work includes hosted PostgreSQL, onboarding/recovery, backups, and production hardening. These are outside Phase 3.2. Assignment remains manual; automatic workload balancing is not implemented.
+Phase 4 can build on the persisted ticket and conversation events for real-time notifications and SLA automation. Future deployment work includes hosted PostgreSQL, private object storage, onboarding/recovery, backups, and production hardening. These are outside Phase 3. Assignment remains manual; automatic workload balancing is not implemented.
 
 No automatic deployment, commits, pushes, database wipes, or history rewrites are part of this phase.
 
-Suggested commit: `feat: implement advanced ticket assignment and escalation management`.
+Suggested commit: `feat: complete ResolveDesk phase 3 attachments and support collaboration`.

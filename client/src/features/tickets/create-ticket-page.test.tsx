@@ -9,6 +9,10 @@ import CreateTicketPage from './create-ticket-page';
 describe('create-ticket form accessibility and validation', () => {
   it('connects labels, displays validation errors, and retains entered text', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
+    client.setQueryData(['protected', '/attachment-limits'], {
+      maxFiles: 5,
+      maxFileBytes: 10485760,
+    });
     client.setQueryData(
       ['protected', '/ticket-categories'],
       [{ id: 'category', name: 'Hardware', active: true }],

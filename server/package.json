@@ -11,16 +11,19 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed-cli.ts",
-    "user:password": "tsx src/db/provision.ts"
+    "user:password": "tsx src/db/provision.ts",
+    "storage:audit": "tsx src/db/storage-audit.ts"
   },
   "dependencies": {
     "argon2": "^0.45.1",
+    "busboy": "^1.6.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.4",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.1",
+    "file-type": "^22.2.0",
     "helmet": "^8.3.0",
     "morgan": "^1.10.1",
     "pg": "^8.23.1",
@@ -28,6 +31,7 @@
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.10",
+    "@types/busboy": "^1.5.5",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",

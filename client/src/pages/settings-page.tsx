@@ -4,6 +4,7 @@ import { useApp } from '../app/context';
 import { getHealth } from '../services/api';
 import { Card, InlineMessage, PageHeader } from '../components/shared/primitives';
 import { Button } from '../components/ui/button';
+import { ResponseTemplates } from '../features/admin/response-templates';
 export default function SettingsPage() {
   const { user, theme, setTheme } = useApp();
   const health = useQuery({
@@ -22,6 +23,7 @@ export default function SettingsPage() {
       />
       <div className="form-layout">
         <div className="space-y-5">
+          {user.role !== 'employee' && <ResponseTemplates />}
           <Card title="Your profile" subtitle="Account details are managed by an administrator.">
             <dl className="ticket-properties">
               <div>

@@ -2,7 +2,22 @@
 
 Base path: /api. Success: { success: true, data: ... }. Error: { success: false, error: { message } }. No stack traces or SQL are returned.
 
-Cookie authentication is required except health, CSRF bootstrap, and login. Mutations require JSON, exact Origin, and X-CSRF-Token. Standard responses: 200, 201 created, 400 invalid input, 401 authentication, 403 permission/CSRF, 404 missing/inaccessible object, 409 conflict, 413 oversized body, 415 media type, 429 login throttle, 500 generic failure.
+Cookie authentication is required except health, CSRF bootstrap, and login. Mutations require exact Origin and X-CSRF-Token. Bodies use JSON except ticket creation, comments and attachment uploads, which also accept bounded multipart/form-data. Standard responses: 200, 201 created, 400 invalid input, 401 authentication, 403 permission/CSRF, 404 missing/inaccessible object, 409 conflict, 413 oversized body, 415 media type, 429 login/upload throttle, 500 generic failure.
+
+## Phase 3 attachment and collaboration endpoints
+
+See [payloads, visibility and retry behavior](attachments-conversations.md#api-contracts). Existing ticket and comment routes support atomic multipart submissions; no duplicate messaging API was introduced.
+
+| Method       | Path                            | Purpose                                       |
+| ------------ | ------------------------------- | --------------------------------------------- |
+| GET          | /attachment-limits              | Configured upload limits                      |
+| GET/POST     | /tickets/:id/attachments        | Scoped metadata / add files                   |
+| GET          | /attachments/:id/download       | Private authenticated download                |
+| DELETE       | /attachments/:id                | Uploader/admin soft deletion and disk cleanup |
+| GET          | /tickets/:id/conversation-state | Visible unread count and read positions       |
+| POST         | /tickets/:id/read               | Advance current user read position            |
+| GET/POST     | /response-templates             | Support template search / creation            |
+| PATCH/DELETE | /response-templates/:id         | Owner/admin edit or archive                   |
 
 ## Endpoints
 

@@ -41,7 +41,11 @@ export function security(auth: ReturnType<typeof authService>, config: Config) {
       !auth.matches(auth.csrf(source), token)
     )
       throw new AppError(403, 'Security token expired. Refresh the page and try again.');
-    if (!req.is('application/json')) throw new AppError(415, 'Use application/json');
+    const uploadRoute =
+      req.method === 'POST' &&
+      /^\/tickets(?:\/[0-9a-f-]+\/(?:attachments|comments))?$/i.test(req.path);
+    if (!req.is('application/json') && !(uploadRoute && req.is('multipart/form-data')))
+      throw new AppError(415, 'Use application/json or a supported multipart upload route');
     next();
   };
   const bootstrap: RequestHandler = (_req, res) => {

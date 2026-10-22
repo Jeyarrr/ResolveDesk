@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '../services/api';
+import { api, upload, ApiError } from '../services/api';
 export function useApi<T>(path: string, enabled = true, preservePage = false) {
   return useQuery({
     queryKey: ['protected', path],
@@ -15,11 +15,18 @@ export function useApiMutation<T = unknown>() {
       path,
       body,
       method = 'POST',
+      onProgress,
+      signal,
     }: {
       path: string;
       body: unknown;
       method?: string;
-    }) => api<T>(path, { method, body }),
+      onProgress?: (percent: number) => void;
+      signal?: AbortSignal;
+    }) =>
+      body instanceof FormData
+        ? upload<T>(path, body, onProgress, signal)
+        : api<T>(path, { method, body, signal }),
     onSuccess: async () => {
       await client.invalidateQueries({ queryKey: ['protected'] });
     },
