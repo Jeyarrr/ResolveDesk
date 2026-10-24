@@ -1,3 +1,4 @@
+import { TicketSlaPanel } from './sla';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -62,6 +63,7 @@ export default function TicketDetailPage() {
       {mutation.error && <InlineMessage error>{mutation.error.message}</InlineMessage>}
       <div className="form-layout mt-6">
         <div className="space-y-5">
+          <TicketSlaPanel ticketId={t.id} />
           <TicketLifecycle
             ticket={t}
             busy={mutation.isPending}
@@ -240,7 +242,7 @@ export default function TicketDetailPage() {
               </div>
               <div>
                 <dt>SLA monitoring</dt>
-                <dd>Not yet available</dd>
+                <dd>See service targets</dd>
               </div>
             </dl>
           </Card>

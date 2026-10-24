@@ -1,3 +1,4 @@
+import { SlaDashboard } from '../tickets/sla';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -8,7 +9,6 @@ import {
   CheckCheck,
   Users,
   Clock3,
-  ShieldCheck,
   Plus,
   BookOpen,
   Activity,
@@ -87,12 +87,6 @@ export default function DashboardPage() {
             icon: Clock3,
             tone: 'sky',
           },
-          {
-            label: 'SLA compliance',
-            value: '—',
-            note: 'SLA monitoring is not yet available',
-            icon: ShieldCheck,
-          },
         ]
       : []),
   ];
@@ -138,6 +132,7 @@ export default function DashboardPage() {
         }
       />
       <QueryState query={query} />
+      <SlaDashboard />
       <div className={'metrics-grid ' + (admin ? 'metrics-six' : '')}>
         {stats.map((s) => (
           <MetricCard key={s.label} {...s} />
@@ -242,11 +237,11 @@ export default function DashboardPage() {
           </div>
         </Card>
         {agent ? (
-          <Card title="SLA monitoring">
-            <EmptyState
-              title="Not yet available"
-              description="SLA policies and deadlines will be introduced in a later phase."
-            />
+          <Card title="Service target guidance">
+            <p className="px-6 pb-6 text-sm text-muted-foreground">
+              The first public support reply satisfies the response target. Internal notes do not
+              count. Pending tickets continue consuming business time.
+            </p>
           </Card>
         ) : (
           <Card

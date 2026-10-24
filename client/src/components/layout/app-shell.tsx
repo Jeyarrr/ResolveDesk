@@ -1,8 +1,8 @@
+import { NotificationCenter } from '../../features/notifications/notification-center';
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import * as Dropdown from '@radix-ui/react-dropdown-menu';
 import {
-  Bell,
   ChevronDown,
   ChevronRight,
   Command,
@@ -46,6 +46,7 @@ export function AppShell() {
     '/tickets?' + queryString({ search, limit: 5 }),
     searchOpen,
   );
+  const notificationCount = useApi<{ count: number }>('/notifications/unread-count');
   const contentRef = useRef<HTMLElement>(null);
   useEffect(() => {
     contentRef.current?.focus({ preventScroll: true });
@@ -62,7 +63,7 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', shortcut);
   }, []);
   if (!user) return null;
-  const unread = 0;
+  const unread = notificationCount.data?.count ?? 0;
   const title =
     navigation.find((item) => item.to === location.pathname)?.label ??
     (location.pathname.startsWith('/tickets/')
@@ -219,18 +220,7 @@ export function AppShell() {
             >
               {theme === 'dark' ? <Sun /> : <Moon />}
             </Button>
-            <Button asChild variant="ghost" size="icon">
-              <Link
-                to="/notifications"
-                aria-label={`Notifications, ${unread} unread`}
-                className="relative"
-              >
-                <Bell />
-                {unread > 0 && (
-                  <span className="absolute right-2 top-2 size-1.5 rounded-full bg-primary" />
-                )}
-              </Link>
-            </Button>
+            <NotificationCenter />
             <div className="mx-1 h-6 w-px bg-border" />
             <Dropdown.Root>
               <Dropdown.Trigger asChild>
@@ -279,7 +269,7 @@ export function AppShell() {
             ResolveDesk <span className="text-border">/</span> A calmer way to support.
           </span>
           <span>
-            Phase 2 <span className="mx-2">·</span> BuiltByJayr
+            Phase 4 <span className="mx-2">·</span> BuiltByJayr
           </span>
         </footer>
       </div>

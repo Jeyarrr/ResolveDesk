@@ -22,6 +22,8 @@ const schema = z
     DB_POOL_MAX: z.coerce.number().int().min(1).max(20).default(5),
     COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
     TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
+    EVENT_POLL_INTERVAL_MS: z.coerce.number().int().min(250).max(10000).default(1000),
+    SLA_CHECK_INTERVAL_MS: z.coerce.number().int().min(1000).max(300000).default(30000),
     UPLOAD_DIR: z.string().min(1).default('uploads'),
     UPLOAD_MAX_FILE_BYTES: z.coerce.number().int().min(1).max(10485760).default(10485760),
     UPLOAD_MAX_FILES: z.coerce.number().int().min(1).max(5).default(5),

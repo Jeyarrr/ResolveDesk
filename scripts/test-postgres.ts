@@ -21,6 +21,7 @@ const suites = browser
       'server/src/lifecycle.test.ts',
       'server/src/assignment.test.ts',
       'server/src/collaboration.test.ts',
+      'server/src/operations.test.ts',
     ];
 for (const suite of suites) {
   // Separate suites preserve seeded identities without sharing credentials or mutating another suite's records.
@@ -42,7 +43,10 @@ for (const suite of suites) {
   const code = await new Promise<number>((resolve) => {
     const child = spawn(
       process.execPath,
-      [fileURLToPath(new URL(entry, import.meta.url)), ...(suite ? ['run', suite] : ['test'])],
+      [
+        fileURLToPath(new URL(entry, import.meta.url)),
+        ...(suite ? ['run', suite] : ['test', ...process.argv.slice(3)]),
+      ],
       {
         stdio: 'inherit',
         shell: false,

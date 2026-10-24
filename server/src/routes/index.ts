@@ -1,3 +1,4 @@
+import { operationsRouter } from './operations.js';
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { healthController } from '../controllers/health-controller.js';
@@ -108,5 +109,6 @@ export function apiRouter(db: Database, config: Config) {
   router.post('/response-templates', requireRole('agent', 'admin'), c.createTemplate);
   router.patch('/response-templates/:id', requireRole('agent', 'admin'), c.updateTemplate);
   router.delete('/response-templates/:id', requireRole('agent', 'admin'), c.archiveTemplate);
+  router.use(operationsRouter(db));
   return router;
 }

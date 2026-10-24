@@ -6,7 +6,8 @@ for (const role of ['ADMIN', 'AGENT', 'EMPLOYEE']) {
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
-  workers: 2,
+  // Scenarios share one seeded database. The operations scenario itself opens three concurrent roles.
+  workers: 1,
   timeout: 60000,
   expect: { timeout: 10000 },
   reporter: [['list'], ['html', { open: 'never' }]],

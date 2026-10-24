@@ -1,3 +1,4 @@
+import { startOperations } from '../realtime.js';
 import { lifecycleTestDatabase } from './local-postgres.js';
 import { createApp } from '../app.js';
 import { seedInputs } from '../db/seed.js';
@@ -16,8 +17,12 @@ const server = createApp(fixture.db, {
   CLIENT_ORIGIN: 'http://127.0.0.1:5174',
   UPLOAD_DIR: uploadDirectory,
 }).listen(4101, '127.0.0.1');
+const operations = startOperations(server, fixture.db, {
+  ...fixture.config,
+  CLIENT_ORIGIN: 'http://127.0.0.1:5174',
+});
 function stop() {
-  server.close(() => void fixture.engine.close());
+  void operations.stop().finally(() => fixture.engine.close());
 }
 process.on('SIGINT', stop);
 process.on('SIGTERM', stop);

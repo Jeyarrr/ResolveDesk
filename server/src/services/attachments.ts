@@ -1,16 +1,9 @@
+import { recordOperation } from './operations.js';
 import { createHash, randomUUID } from 'node:crypto';
 import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Database, Executor } from '../db/connection.js';
-import {
-  activity,
-  attachments,
-  comments,
-  submissions,
-  users,
-  tickets,
-  type Actor,
-} from '../db/schema.js';
+import { attachments, comments, submissions, users, tickets, type Actor } from '../db/schema.js';
 import { permittedTicket, scope } from '../repositories/tickets.js';
 import { AppError } from '../middleware/errors.js';
 import { commentInput, ticketInput, uuid } from '../validation/schemas.js';
@@ -184,7 +177,7 @@ export function attachmentService(db: Database, storage: PrivateStorage) {
             savedIds.push(saved!.id);
           }
           if (files.length)
-            await tx.insert(activity).values({
+            await recordOperation(tx, {
               ticketId: target,
               actorId: actor.id,
               action: 'Attachments uploaded',
@@ -227,7 +220,7 @@ export function attachmentService(db: Database, storage: PrivateStorage) {
             'Only the uploader or an administrator can delete this attachment',
           );
         await tx.update(attachments).set({ deletedAt: new Date() }).where(eq(attachments.id, id));
-        await tx.insert(activity).values({
+        await recordOperation(tx, {
           ticketId: row.ticketId,
           actorId: actor.id,
           action: 'Attachment deleted',

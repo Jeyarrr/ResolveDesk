@@ -9,7 +9,7 @@ export function healthController(db: Database): RequestHandler {
       data: {
         status: 'ok',
         service: 'resolvedesk-api',
-        phase: 2,
+        phase: 4,
         timestamp: new Date().toISOString(),
         uptimeSeconds: Math.floor(process.uptime()),
       },

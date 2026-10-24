@@ -1,3 +1,4 @@
+import { RealtimeConnection } from './realtime';
 import { useEffect, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { MotionConfig } from 'motion/react';
@@ -85,6 +86,7 @@ function SessionProvider({ children }: { children: ReactNode }) {
         logout,
       }}
     >
+      <RealtimeConnection session={session.data} />
       {children}
     </AppContext.Provider>
   );

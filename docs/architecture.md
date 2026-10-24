@@ -1,5 +1,13 @@
 # Application architecture
 
+## Phase 4 real-time operations
+
+The existing HTTP server owns Socket.IO and the operations scheduler. Handshakes reuse database sessions, exact origin checks and the existing CSRF HMAC. Every delivery and ticket subscription rechecks current access; idle sockets are also revalidated. Only event IDs, types and authorized ticket IDs are sent. Internal notes and attachments retain their existing REST permissions.
+
+Business services write activity, SLA changes and an outbox row in the same transaction. A bounded worker claims pending events with PostgreSQL row locks, applies current recipient preferences/permissions, inserts unique notifications and commits before sending socket updates. A separate interval within the worker reconciles SLA warnings and breaches using ticket locks and unique event keys. Overlap is prevented locally; PostgreSQL protects concurrent worker writes.
+
+React owns one managed socket per authenticated session. Events invalidate TanStack Query data; reconnects refetch current state, logout clears the connection and cache, and reassignment removes stale access. Notification history is durable even if a live packet is missed. See [operations architecture, calculations, limits and APIs](phase4-operations.md).
+
 ## Phase 3 attachment and collaboration flow
 
 React forms send credentialed, CSRF-protected multipart requests through the existing API and query hooks. The collaboration controller authenticates and checks ticket access before bounded parsing. The upload service validates filenames, limits and detected file signatures. The attachment service coordinates existing ticket/comment services, PostgreSQL transactions and the private storage adapter. Metadata commits only after file writes; ordinary failures compensate on disk. Database tombstones revoke access before physical deletion.
@@ -41,7 +49,7 @@ User administration serializes changes with a PostgreSQL table lock so simultane
 
 ## Scope and limitations
 
-Role permissions are enforced in the API and query predicates. Employee knowledge content is currently static, clearly labeled sample material. Notification delivery, SLA policies, and recovery are unavailable. Attachment validation does not include malware scanning. Reports use database aggregates; current resolution times describe the latest completed lifecycle, not historical reopen cycles.
+Role permissions are enforced in the API and query predicates. Employee knowledge content is currently static, clearly labeled sample material. Account recovery and external notification delivery are unavailable. Attachment validation does not include malware scanning. Phase 4 reports use a bounded, repeatable-read database snapshot and retain historical SLA reopen cycles; the legacy dashboard aggregate remains compatible. Socket delivery currently targets a single backend process; multiple instances need shared fan-out.
 
 Tests exercise the real API against isolated PGlite and separate local native PostgreSQL databases. Native lifecycle tests establish multi-connection locking behavior on the local server. Browser tests use separate ports and databases. Before production, verify hosted database connectivity/TLS, migrations, cookie/CORS behavior, proxy trust, rate limiting across replicas, backups, logging retention, and monitoring.
 

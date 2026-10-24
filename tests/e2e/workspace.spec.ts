@@ -301,9 +301,7 @@ test('admin account creation and reference management persist', async ({ page })
   await page.getByLabel('Report date range').selectOption('7');
   await expect(page.getByRole('img', { name: /Ticket volume/ })).toBeVisible();
   await page.goto('/notifications');
-  await expect(
-    page.getByRole('heading', { name: 'Notifications are not yet available' }),
-  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Notifications', exact: true })).toBeVisible();
 });
 test('mobile navigation, theme persistence, health and knowledge guides', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

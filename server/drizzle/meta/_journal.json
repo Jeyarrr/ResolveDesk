@@ -43,6 +43,13 @@
       "when": 1792666170507,
       "tag": "0005_bright_wraith",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792684800737,
+      "tag": "0006_equal_sunspot",
+      "breakpoints": true
     }
   ]
 }

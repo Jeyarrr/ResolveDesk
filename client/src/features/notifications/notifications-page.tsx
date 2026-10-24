@@ -1,17 +1,17 @@
-import { Card, EmptyState, PageHeader } from '../../components/shared/primitives';
+import { Card, PageHeader } from '../../components/shared/primitives';
+import { NotificationList } from './notification-center';
 export default function NotificationsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="STAY IN THE LOOP"
+        eyebrow="YOUR SUPPORT UPDATES"
         title="Notifications"
-        description="Notification delivery is planned for a later phase."
+        description="Persistent updates for your authorized tickets."
       />
-      <Card title="Your updates">
-        <EmptyState
-          title="Notifications are not yet available"
-          description="Open a ticket to see its saved conversation and activity history. Real-time, email, and desktop notifications are not enabled."
-        />
+      <Card title="Notification history">
+        <div className="px-6 pb-6">
+          <NotificationList />
+        </div>
       </Card>
     </>
   );

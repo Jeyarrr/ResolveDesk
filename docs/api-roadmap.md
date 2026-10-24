@@ -58,7 +58,11 @@ User listing: page, limit, search (name/email), role, accountStatus. Creation/ed
 
 Reference fields: name, description, active. Non-admin lists show active entries only. Archival does not delete existing links.
 
-Analytics: days (1–90, default 14), period (false default). period=true limits cohort metrics to tickets created in that UTC range. Volume series separately counts creation/resolution events in the range. The existing dashboard performance summary shows the top 20 agents; the separate Phase 3.2 workload API paginates all active agents. SLA is null. Current aggregate queries may observe concurrent committed updates between statements; analytics are not an accounting snapshot.
+Legacy dashboard analytics: days (1–90, default 14), period (false default). period=true limits cohort metrics to tickets created in that UTC range. Volume series separately counts creation/resolution events in the range. The existing dashboard performance summary shows the top 20 agents; the separate Phase 3.2 workload API paginates all active agents. Its legacy SLA field remains null. These legacy aggregate queries may observe concurrent committed updates between statements. Phase 4 reports use a repeatable-read snapshot and separate SLA endpoints.
+
+## Phase 4 operations APIs
+
+See the [complete endpoint contracts and reporting filters](phase4-operations.md#api-additions) for notifications, preferences, ticket SLA cycles, SLA overview/policies, advanced analytics and four CSV exports. These extend the existing router and session/CSRF middleware. Notification reads enforce ownership and current ticket access; reporting and policy configuration require administrator access. No API returns raw internal-note content through notifications or exports.
 
 Comments/history are ordered oldest-first with stable tie breaks. Lifecycle events include `explanation` and `lifecycleVersion`; activity ties use lifecycle version then UUID. Their complete history is currently returned; cursor pagination for long conversations is future work.
 

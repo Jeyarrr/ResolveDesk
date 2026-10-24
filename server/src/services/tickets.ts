@@ -1,7 +1,8 @@
+import { recordOperation } from './operations.js';
 import { and, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database, Executor, Transaction } from '../db/connection.js';
-import { activity, categories, comments, tickets, users, type Actor } from '../db/schema.js';
+import { categories, comments, tickets, users, type Actor } from '../db/schema.js';
 import { AppError } from '../middleware/errors.js';
 import { permittedTicket } from '../repositories/tickets.js';
 import type { commentInput, ticketInput, ticketPatch } from '../validation/schemas.js';
@@ -22,10 +23,7 @@ export const recordActivity = (
   oldValue?: string | null,
   newValue?: string | null,
   isInternal = false,
-) =>
-  db
-    .insert(activity)
-    .values({ ticketId, actorId: actor.id, action, oldValue, newValue, isInternal });
+) => recordOperation(db, { ticketId, actorId: actor.id, action, oldValue, newValue, isInternal });
 export function ticketService(db: Database | Transaction) {
   return {
     async create(actor: Actor, input: z.infer<typeof ticketInput>) {
@@ -108,7 +106,7 @@ export function ticketService(db: Database | Transaction) {
           })
           .where(eq(tickets.id, id))
           .returning();
-        await tx.insert(activity).values({
+        await recordOperation(tx, {
           ticketId: id,
           actorId: actor.id,
           action: ticket.assignedAgentId ? 'Ticket reassigned' : 'Ticket assigned',

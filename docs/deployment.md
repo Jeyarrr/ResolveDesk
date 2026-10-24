@@ -1,6 +1,6 @@
 # Deployment preparation (not deployed)
 
-This document is a future deployment reference. Current development runs on the existing local PostgreSQL database through pgAdmin 4 with `DB_SSL=false`. Phase 3.1 does not configure Neon, change the local connection, synchronize data, or deploy anything.
+This document is a future Phase 5 deployment reference. Current development runs on the existing local PostgreSQL database through pgAdmin 4 with `DB_SSL=false`. Phase 4 does not configure Neon, change the local connection, synchronize data, or deploy anything.
 
 ## Frontend: Vercel
 
@@ -9,6 +9,10 @@ Use client as the Vercel root directory with the Vite framework preset. Install 
 Set public VITE_API_URL=https://YOUR-API-HOST/api before building. Do not put DATABASE_URL or SESSION_SECRET into Vite variables. Default /api is only appropriate with an actual same-origin API proxy; the supplied Vercel rewrite does not provide that proxy.
 
 ## Backend: long-lived Node host
+
+Phase 4 adds Socket.IO using WebSocket transport and an in-process persistent-work scheduler. The host/proxy must support WebSocket upgrades on `/socket.io`, preserve the exact allowed Origin, and keep the Node process running for SLA monitoring. Migration `0006` must precede startup. The worker reconciles missed deadlines on restart; no frontend or extra worker command is required.
+
+Before adding replicas, provide a shared Socket.IO adapter and event fan-out so committed updates reach all instances. Current PostgreSQL locks/unique keys prevent duplicate notifications and SLA breaches across workers, but in-memory sockets are local to one process. The worker is unsuitable for ephemeral request-only/serverless execution. Add capacity testing and outbox/notification retention before production scale.
 
 Install production dependencies, run npm run build -w server during the build stage with TypeScript available, and start npm start -w server. Set NODE_ENV=production, HOST=0.0.0.0, the host-assigned PORT, verified DB_SSL=true, DATABASE_URL, a strong SESSION_SECRET, and exact HTTPS CLIENT_ORIGIN.
 

@@ -1,3 +1,5 @@
+import { NotificationPreferences } from '../features/notifications/notification-center';
+import { SlaPolicies } from '../features/tickets/sla';
 import { Moon, Sun, ShieldCheck, Server } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useApp } from '../app/context';
@@ -44,13 +46,8 @@ export default function SettingsPage() {
               </div>
             </dl>
           </Card>
-          <Card title="Notification preferences">
-            <div className="p-6 pt-0">
-              <InlineMessage>
-                Email notifications, desktop delivery, and digests are not yet available.
-              </InlineMessage>
-            </div>
-          </Card>
+          <NotificationPreferences />
+          {user.role === 'admin' && <SlaPolicies />}
         </div>
         <div className="space-y-5">
           <Card title="Appearance" subtitle="Saved on this device">

@@ -10,6 +10,11 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/socket.io': {
+        target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:4000',
+        changeOrigin: false,
+        ws: true,
+      },
       '/api': {
         target: process.env.API_PROXY_TARGET || 'http://127.0.0.1:4000',
         changeOrigin: false,

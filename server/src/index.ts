@@ -1,3 +1,4 @@
+import { startOperations } from './realtime.js';
 import { createApp } from './app.js';
 import { readConfig } from './config/env.js';
 import { connectDatabase } from './db/connection.js';
@@ -13,16 +14,14 @@ try {
 const server = createApp(db, env).listen(env.PORT, env.HOST, () => {
   console.log(`ResolveDesk API listening on port ${env.PORT}`);
 });
+const operations = startOperations(server, db, env);
 server.on('error', (error) => {
   console.error('API startup failed:', error.name);
   void pool.end();
   process.exitCode = 1;
 });
 function shutdown() {
-  server.close(async (error) => {
-    if (error) process.exitCode = 1;
-    await pool.end();
-  });
+  void operations.stop().finally(() => pool.end());
   setTimeout(() => process.exit(1), 5000).unref();
 }
 process.on('SIGTERM', shutdown);

@@ -25,7 +25,7 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 
 ## Development status
 
-**Phase 3: Ticket workflows, private attachments and support collaboration.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
+**Phase 4: Real-time operations, persistent notifications, SLA automation and reporting.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
 
 Phase 3.1 adds structured resolution summaries, employee confirmation, reasoned reopening, audited administrator closure/reopening, lifecycle progress, and version checks for conflicting requests. See the [lifecycle rules and walkthrough](docs/ticket-lifecycle.md).
 
@@ -34,6 +34,8 @@ Phase 3.2 adds confirmed assignment/reassignment with reasons and conflict prote
 Phase 3.3 adds private file uploads and guarded downloads. Phase 3.4 adds attachment-enabled conversations, persistent unread tracking and saved replies. Phase 3.5 integrates these with lifecycle, assignment and escalation workflows. See the [attachment and collaboration guide](docs/attachments-conversations.md) for configuration, APIs, security boundaries and a three-role walkthrough.
 
 ## Objectives and functionality
+
+Phase 4 adds authenticated Socket.IO updates, a persistent notification center and preferences, configurable Manila business-hour SLA policies, automatic deadline monitoring, and filtered reports with four CSV exports. See the [Phase 4 operations guide](docs/phase4-operations.md) for architecture, calculation rules, API contracts, limits and a simultaneous Jayr/George/Mon walkthrough.
 
 - Employees submit and track their own support tickets and public conversations.
 - Support agents manage assigned tickets, follow status transitions, and add internal notes.
@@ -46,15 +48,21 @@ Phase 3.3 adds private file uploads and guarded downloads. Phase 3.4 adds attach
 - Resolution summaries, resolving and closing actors, employee confirmation, and complete reopening history.
 - Server pagination, search, category/priority/status filtering, and sorting.
 - Role-scoped dashboards and database reports, trends, status and priority distributions.
+- Live assignment, conversation, escalation and lifecycle updates with authorization checks and reconnect synchronization.
+- Database notifications, read/unread filters, unread badges and configurable in-app preferences.
+- First-response and resolution deadlines, policy snapshots, separate reopen cycles, warning and breach notifications.
+- Administrator date/status/priority/category/department/agent filters, interactive charts and safe CSV reports.
 - Responsive navigation, dark/light themes, keyboard navigation, and sample knowledge guides.
 
-**Deferred:** password recovery/email invitations, production account onboarding, real-time notifications, SLA automation, MFA, advanced analytics, and the knowledge base backend. Screens explicitly describe availability. No public registration or demo role bypass exists.
+**Deferred:** password recovery/email invitations, production account onboarding, MFA, email/SMS/push delivery, PDF reports, SLA pauses, and the knowledge base backend. Screens explicitly describe availability. No public registration or demo role bypass exists.
 
 ## Stack and architecture
 
 React 19 · TypeScript · Vite · Tailwind CSS 4 · Radix/shadcn-style UI · TanStack Query · React Hook Form · Zod · Express 5 · Drizzle ORM/Kit · PostgreSQL (local) · node-postgres · Argon2id.
 
 Browser → React/TanStack Query → credentialed Express REST API → permission-aware services/repositories → bounded pg pool → local PostgreSQL.
+
+Ticket transactions also write a PostgreSQL event outbox. The backend worker creates durable notifications and sends authorized Socket.IO invalidations; the browser refetches REST data. The same backend monitors indexed SLA deadlines without an open browser. Socket.IO uses WebSocket transport and requires a compatible persistent Node backend/proxy.
 
 - `client/src`: UI, API client, query hooks, session provider, feature pages.
 - `server/src`: configuration, routes/controllers, services, repositories, middleware, validation, database schema/scripts.
@@ -63,7 +71,7 @@ Browser → React/TanStack Query → credentialed Express REST API → permissio
 
 ## Local setup
 
-Requires Node.js 24+, npm 10+, and local PostgreSQL. Existing installations should keep their working `server/.env` and database; no reset or reseeding is needed for Phase 3.
+Requires Node.js 24+, npm 10+, and local PostgreSQL. Existing installations should keep their working `server/.env` and database; no reset or reseeding is needed for Phase 4.
 
 1. Install from the repository root:
 
@@ -95,6 +103,8 @@ Phase 3.2 migrations `0003_gray_mysterio.sql` and `0004_tricky_zzzax.sql` add as
 
 Phase 3 migration `0005_bright_wraith.sql` adds attachment metadata, idempotent submission records, conversation read positions and saved replies. It adds a generated position to existing comments without replacing their contents or relationships. Keep the reviewed unique-index-before-foreign-key order. Existing installations only migrate; do not reseed.
 
+Phase 4 migration `0006_equal_sunspot.sql` adds `operation_events`, `notifications`, `notification_preferences`, `sla_policies`, and `ticket_slas`, with foreign keys, indexes, deduplication constraints and four demonstration policies. It does not alter existing tables or records. Existing active tickets start SLA tracking when the worker first enrolls them; historical response/resolution times are not invented.
+
 4. For initial **development** accounts, set three different strong passwords (12–128 characters) in ignored `server/.env`:
 
 - `SEED_ADMIN_PASSWORD`
@@ -116,7 +126,7 @@ Fresh development seeds create Jayr (`admin`, Administration), George (`agent`, 
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. Express uses port 4000; Vite proxies `/api` to Express. Use `127.0.0.1` consistently, matching CLIENT_ORIGIN. Missing server configuration produces a startup error; there is no mock fallback.
+Open **http://127.0.0.1:5173**. Express uses port 4000; Vite proxies `/api` and `/socket.io` to Express. Use `127.0.0.1` consistently, matching CLIENT_ORIGIN. Missing server configuration produces a startup error; there is no mock fallback. The backend starts notifications and SLA monitoring automatically; no separate worker command is needed.
 
 The root development launcher starts Vite and tsx directly with Node, avoiding nested Windows npm batch files and their `Terminate batch job (Y/N)?` prompts. Press Ctrl+C to stop both processes. It checks required configuration before launching either app. If PowerShell itself resolves `npm` to `npm.cmd`, use `npm.ps1 run dev` to avoid the outer batch wrapper as well.
 
@@ -136,17 +146,19 @@ This hashes the supplied password, activates the account, and revokes its sessio
 
 ## Environment variables
 
-| Server variable  | Purpose                                                                 |
-| ---------------- | ----------------------------------------------------------------------- |
-| DATABASE_URL     | Existing local PostgreSQL connection string; required                   |
-| SESSION_SECRET   | Random HMAC secret, minimum 32 characters; required                     |
-| CLIENT_ORIGIN    | Exact permitted frontend origin, no trailing slash                      |
-| NODE_ENV         | development, test, or production                                        |
-| PORT / HOST      | Listener; defaults 4000 / 127.0.0.1                                     |
-| DB_SSL           | false for the current local server; verified TLS required in production |
-| DB_POOL_MAX      | Maximum connections per process, default 5                              |
-| COOKIE_SAME_SITE | lax default; none for genuinely cross-site HTTPS deployment             |
-| TRUST_PROXY      | Trusted reverse-proxy hop count, default 0; configure for actual host   |
+| Server variable        | Purpose                                                                 |
+| ---------------------- | ----------------------------------------------------------------------- |
+| DATABASE_URL           | Existing local PostgreSQL connection string; required                   |
+| SESSION_SECRET         | Random HMAC secret, minimum 32 characters; required                     |
+| CLIENT_ORIGIN          | Exact permitted frontend origin, no trailing slash                      |
+| NODE_ENV               | development, test, or production                                        |
+| PORT / HOST            | Listener; defaults 4000 / 127.0.0.1                                     |
+| DB_SSL                 | false for the current local server; verified TLS required in production |
+| DB_POOL_MAX            | Maximum connections per process, default 5                              |
+| COOKIE_SAME_SITE       | lax default; none for genuinely cross-site HTTPS deployment             |
+| TRUST_PROXY            | Trusted reverse-proxy hop count, default 0; configure for actual host   |
+| EVENT_POLL_INTERVAL_MS | Outbox and socket session checks, default 1000 ms (250–10000)           |
+| SLA_CHECK_INTERVAL_MS  | SLA monitoring interval, default 30000 ms (1000–300000)                 |
 
 Private attachment defaults require no changes to an existing environment: `UPLOAD_DIR=uploads`, `UPLOAD_MAX_FILE_BYTES=10485760`, `UPLOAD_MAX_FILES=5`, and `UPLOAD_MAX_REQUEST_BYTES=53477376`. Relative storage paths resolve from the repository root. Keep the directory private and Git-ignored; custom paths need equivalent exclusions. Limits can be lowered, up to the supported 10 MB/file and 5 files/request ceilings. See [storage maintenance](docs/attachments-conversations.md#storage-and-maintenance).
 
@@ -183,8 +195,8 @@ These tests validate local PostgreSQL multi-connection contention. Hosted networ
 
 ## Roadmap and repository safety
 
-Phase 4 can build on the persisted ticket and conversation events for real-time notifications and SLA automation. Future deployment work includes hosted PostgreSQL, private object storage, onboarding/recovery, backups, and production hardening. These are outside Phase 3. Assignment remains manual; automatic workload balancing is not implemented.
+Phases 1–4 are implemented locally. Phase 5 can address hosted PostgreSQL, persistent WebSocket hosting, private object storage, onboarding/recovery, backups, and deployment validation. Horizontal scaling needs shared socket/event fan-out and shared throttling; database locks already prevent duplicate SLA outcomes. Assignment remains manual; automatic workload balancing is not implemented.
 
 No automatic deployment, commits, pushes, database wipes, or history rewrites are part of this phase.
 
-Suggested commit: `feat: complete ResolveDesk phase 3 attachments and support collaboration`.
+Suggested commit: `feat: implement real-time notifications SLA monitoring and analytics`.

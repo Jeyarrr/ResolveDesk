@@ -300,3 +300,133 @@ export const responseTemplates = pgTable(
     ),
   ],
 );
+
+export interface BusinessCalendar {
+  timezone: 'Asia/Manila';
+  startHour: number;
+  endHour: number;
+  weekdays: number[];
+  holidays: string[];
+}
+export interface PolicySnapshot {
+  name: string;
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  responseMinutes: number;
+  resolutionMinutes: number;
+  warningPercent: number;
+  calendar: BusinessCalendar;
+}
+export const slaPolicies = pgTable(
+  'sla_policies',
+  {
+    id: id(),
+    name: text('name').notNull(),
+    priority: priority('priority').notNull().unique(),
+    responseMinutes: integer('response_minutes').notNull(),
+    resolutionMinutes: integer('resolution_minutes').notNull(),
+    warningPercent: integer('warning_percent').notNull().default(80),
+    calendar: jsonb('calendar').$type<BusinessCalendar>().notNull(),
+    active: boolean('active').notNull().default(true),
+    ...times(),
+  },
+  (t) => [
+    check(
+      'sla_policy_bounds',
+      sql`${t.responseMinutes} BETWEEN 1 AND 525600 AND ${t.resolutionMinutes} BETWEEN 1 AND 525600 AND ${t.warningPercent} BETWEEN 1 AND 99`,
+    ),
+  ],
+);
+export const ticketSlas = pgTable(
+  'ticket_slas',
+  {
+    id: id(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    cycle: integer('cycle').notNull(),
+    policyId: uuid('policy_id')
+      .notNull()
+      .references(() => slaPolicies.id, { onDelete: 'restrict' }),
+    snapshot: jsonb('policy_snapshot').$type<PolicySnapshot>().notNull(),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    responseDueAt: timestamp('response_due_at', { withTimezone: true }).notNull(),
+    resolutionDueAt: timestamp('resolution_due_at', { withTimezone: true }).notNull(),
+    responseWarningAt: timestamp('response_warning_at', { withTimezone: true }).notNull(),
+    resolutionWarningAt: timestamp('resolution_warning_at', { withTimezone: true }).notNull(),
+    firstRespondedAt: timestamp('first_responded_at', { withTimezone: true }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    responseMinutes: integer('response_minutes'),
+    resolutionMinutes: integer('resolution_minutes'),
+    responseBreachedAt: timestamp('response_breached_at', { withTimezone: true }),
+    resolutionBreachedAt: timestamp('resolution_breached_at', { withTimezone: true }),
+    responseWarnedAt: timestamp('response_warned_at', { withTimezone: true }),
+    resolutionWarnedAt: timestamp('resolution_warned_at', { withTimezone: true }),
+    nextCheckAt: timestamp('next_check_at', { withTimezone: true }),
+    ...times(),
+  },
+  (t) => [
+    uniqueIndex('sla_ticket_cycle_unique').on(t.ticketId, t.cycle),
+    index('sla_due_idx').on(t.nextCheckAt),
+    check('sla_cycle_positive', sql`${t.cycle} > 0`),
+  ],
+);
+export const operationEvents = pgTable(
+  'operation_events',
+  {
+    id: id(),
+    eventKey: text('event_key').notNull().unique(),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    actorId: uuid('actor_id').references(() => users.id, { onDelete: 'restrict' }),
+    type: text('type').notNull(),
+    internal: boolean('internal').notNull().default(false),
+    recipients: jsonb('recipients').$type<string[]>().notNull(),
+    audience: jsonb('audience').$type<string[]>().notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    processedAt: timestamp('processed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('events_pending_idx')
+      .on(t.createdAt)
+      .where(sql`${t.processedAt} IS NULL`),
+  ],
+);
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: id(),
+    eventId: uuid('event_id')
+      .notNull()
+      .references(() => operationEvents.id, { onDelete: 'restrict' }),
+    recipientId: uuid('recipient_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    ticketId: uuid('ticket_id')
+      .notNull()
+      .references(() => tickets.id, { onDelete: 'restrict' }),
+    type: text('type').notNull(),
+    title: text('title').notNull(),
+    internal: boolean('internal').notNull().default(false),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('notification_event_recipient_unique').on(t.eventId, t.recipientId),
+    index('notification_recipient_date_idx').on(t.recipientId, t.createdAt),
+    index('notification_unread_idx')
+      .on(t.recipientId)
+      .where(sql`${t.readAt} IS NULL`),
+  ],
+);
+export const notificationPreferences = pgTable('notification_preferences', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'restrict' }),
+  assignments: boolean('assignments').notNull().default(true),
+  replies: boolean('replies').notNull().default(true),
+  status: boolean('status').notNull().default(true),
+  escalations: boolean('escalations').notNull().default(true),
+  sla: boolean('sla').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

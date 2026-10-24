@@ -1,6 +1,6 @@
 # Private attachments and support collaboration
 
-Phase 3.3–3.5 extends the existing ticket and comment workflows. The local PostgreSQL database, authentication, roles, lifecycle, assignment and escalation services remain in use. No cloud storage, Neon, WebSocket service or automatic notification delivery is configured.
+Phase 3.3–3.5 extends the existing ticket and comment workflows. The local PostgreSQL database, authentication, roles, lifecycle, assignment and escalation services remain in use. No cloud storage or Neon is configured. Phase 4 now adds [authenticated live updates and persistent notifications](phase4-operations.md) to these workflows.
 
 ## Storage and maintenance
 
@@ -108,6 +108,6 @@ Use the existing local demo logins from the README; log out when switching roles
 
 These steps intentionally add demo records. Automated write tests instead use isolated PostgreSQL databases and temporary private storage. See the [verification record](verification.md) for executed checks and preservation results.
 
-## Phase 4 readiness and limits
+## Integration and limits
 
-Persisted ticket events, comments, read cursors and the storage adapter provide foundations for future notifications and SLA work. Phase 4 is not implemented here. No malware scanner, full file-content disarm, nested conversation threads, automatic template seeding, conversation pagination, background orphan cleanup or distributed upload limiting is included. Local files need coordinated backups; production object storage, deployment and operational hardening remain separate work.
+Persisted ticket events, comments, read cursors and the storage adapter integrate with the Phase 4 outbox, notifications and SLA services. No malware scanner, full file-content disarm, nested conversation threads, automatic template seeding, conversation pagination, background orphan cleanup or distributed upload limiting is included. Local files need coordinated backups; production object storage, deployment and operational hardening remain separate work.

@@ -1,5 +1,44 @@
 # Verification record
 
+## Phase 4 complete — October 24, 2026
+
+Implemented authenticated Socket.IO updates, PostgreSQL notifications/preferences, business-calendar SLA policies and monitoring, role-scoped SLA views, filtered reports and four CSV exports. The existing local database and Phase 1–3 workflows remain in use. See the [implementation map, APIs, worker setup, definitions and manual walkthrough](phase4-operations.md).
+
+| Check                              | Result                                                                                                                                     |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Default Vitest suite               | 136 passed, 1 native-only test skipped; 16 files passed                                                                                    |
+| Native PostgreSQL suites           | 58 passed: 12 lifecycle, 15 assignment, 15 collaboration, 16 operations                                                                    |
+| Native PostgreSQL browser suite    | 6 passed, including three concurrent role contexts and the existing complete ticket workflow                                               |
+| Accessibility                      | Axe checks passed on existing pages and populated reports, notifications and settings; reports also checked in light mode                  |
+| Responsive layouts                 | Phase 4 pages checked at 375, 430, 768, 1366 and 1920px; desktop/mobile report screenshots visually inspected                              |
+| TypeScript / ESLint                | Client, server and tooling checks passed                                                                                                   |
+| Production builds                  | Client and server passed                                                                                                                   |
+| Formatting / repository whitespace | Prettier and `git diff --check` passed                                                                                                     |
+| Migration drift                    | No schema changes after generating `0006`                                                                                                  |
+| Application migration              | Reviewed additive `0006_equal_sunspot.sql` applied to existing local `resolvedesk`                                                         |
+| Data preservation                  | All 12 original tables matched immediate pre-migration row/column hashes, including sessions and credentials                               |
+| Environment / files                | `server/.env` bytes unchanged; private file inventory unchanged                                                                            |
+| Application runtime                | API started on the local database and `/api/health` returned 200; temporary verification process stopped afterward                         |
+| Storage audit                      | Dry-run found zero orphaned, deleted or missing objects; nothing removed                                                                   |
+| Dependency audit                   | Zero vulnerabilities after updating the transitive `body-parser` dependency to 2.4.0                                                       |
+| Publishable-file scan              | 172 files checked; no actual database URL, session secret or private-key material found; environments, uploads and temporary files ignored |
+
+The current local records retain Jayr/admin/Administration, George/agent/Human Resources and Mon/employee/General, along with the pre-existing fourth account. No account was recreated, renamed, reseeded or assigned a new password. Migration comparison covered 4 users, 14 sessions, 6 departments, 7 categories, 1 ticket, 2 comments, 4 activity entries and 1 conversation read position. User/session tables had already changed between the initial task snapshot and the immediate pre-migration snapshot; those pre-existing changes were preserved. All other original table hashes matched the initial snapshot too. Hashes and comparison artifacts remain in ignored `tmp/` files, without raw credentials.
+
+Targeted security checks cover anonymous/wrong-origin/invalid-CSRF socket rejection, real cross-ticket subscription denial, recipient ownership, internal-note exclusion, old-assignee notification visibility, session expiry, role changes, logout/reconnect denial, administrator-only policy/report access and CSV formula neutralization. A failed business transaction rolls back both SLA changes and the outbox. A live delivery failure retains the committed notification; subsequent processing does not duplicate it.
+
+Calendar tests cover four priorities, before/after business hours, weekends, configured holidays, first qualifying public replies, late/on-time resolution, Pending behavior, policy snapshots, separate reopen cycles and concurrent/repeated worker runs. Replies after resolution cannot retroactively improve the completed first-response result. Reporting checks exercise all filters, Manila date bounds, completed-cycle denominators, all four exports and category names that overlap JavaScript property names.
+
+The three-role browser scenario covers intake and assignment notifications, automatic queue updates, two-way public replies, private notes, escalation acknowledgement, resolution/confirmation, persistent read state and CSV export. It disconnects the employee browser, reopens the ticket in the administrator browser, then confirms reconnect/refetch displays the second SLA cycle without manual refresh. Existing browser tests continue covering attachments, saved replies, lifecycle conflicts, administration, theme persistence and responsive navigation.
+
+The initial combined browser run encountered page-load timeouts with two scenarios running concurrently. Browser scenarios now run sequentially against their shared fixture; the dedicated operations scenario still uses three simultaneous authenticated contexts. The complete six-scenario rerun passed. Selector errors and a keyboard-inaccessible report scroll region found during implementation were corrected before that run.
+
+The dependency audit identified the recently published [body-parser denial-of-service advisory](https://github.com/advisories/GHSA-27r3-jxmh-p828); the lockfile now resolves the patched 2.4.0 release. Automated tests use separate `resolvedesk_test_*` databases and generated credentials. No application reset, cloud migration, deployment, commit or push was performed.
+
+### Remaining deployment validation
+
+This completes the local Phase 4 scope. Physical database failover, production load/capacity, hosted TLS/cookies/proxies and multiple application replicas have not been tested. A shared socket/event adapter is required before horizontal scaling. Email/SMS/push delivery, PDF reports, SLA pauses, other timezones, retention jobs and production onboarding/recovery remain future scope. Reports are bounded to 10,000 tickets / 20,000 SLA cycles and the UI agent selector lists up to 100 agents. See [Phase 5 preparation](deployment.md).
+
 ## Phase 3 complete - October 22, 2026
 
 Implemented private attachments, enhanced public/internal conversations, persistent read cursors and support response templates, integrated with the existing lifecycle, assignment, escalation and workload workflows.

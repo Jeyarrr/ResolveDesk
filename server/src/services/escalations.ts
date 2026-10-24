@@ -1,8 +1,9 @@
+import { recordOperation } from './operations.js';
 import { and, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/pg-core';
 import type { z } from 'zod';
 import type { Database } from '../db/connection.js';
-import { activity, escalations, tickets, users, type Actor } from '../db/schema.js';
+import { escalations, tickets, users, type Actor } from '../db/schema.js';
 import { AppError } from '../middleware/errors.js';
 import { permittedTicket, scope } from '../repositories/tickets.js';
 import {
@@ -97,7 +98,7 @@ export function escalationService(db: Database) {
           .insert(escalations)
           .values({ ticketId, requestedBy: actor.id, reason: input.reason })
           .returning();
-        await tx.insert(activity).values({
+        await recordOperation(tx, {
           ticketId,
           actorId: actor.id,
           action: 'Escalation requested',
@@ -143,7 +144,7 @@ export function escalationService(db: Database) {
           })
           .where(eq(escalations.id, id))
           .returning();
-        await tx.insert(activity).values({
+        await recordOperation(tx, {
           ticketId: row.ticketId,
           actorId: actor.id,
           action: `Escalation ${status}`,

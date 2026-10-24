@@ -1,7 +1,8 @@
+import { recordOperation } from './operations.js';
 import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Database } from '../db/connection.js';
-import { activity, tickets, type Actor } from '../db/schema.js';
+import { tickets, type Actor } from '../db/schema.js';
 import { permittedTicket } from '../repositories/tickets.js';
 import { AppError } from '../middleware/errors.js';
 import {
@@ -116,7 +117,7 @@ export function lifecycleService(db: Database) {
         })
         .where(eq(tickets.id, id))
         .returning();
-      await tx.insert(activity).values({
+      await recordOperation(tx, {
         ticketId: id,
         actorId: actor.id,
         action,

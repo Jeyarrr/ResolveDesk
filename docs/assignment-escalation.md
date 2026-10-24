@@ -84,4 +84,4 @@ Neither migration updates existing account credentials, roles, departments, tick
 5. To try reassignment without provisioning another local agent, return the ticket to Unassigned with a reason, then assign George again. Native integration tests cover transfer between two distinct agents in isolated databases.
 6. Confirm ticket status stayed unchanged and history persists after reload. Continue the Phase 3.1 resolution, employee confirmation and reopening workflow.
 
-Only perform these intentional demo writes on tickets you choose. Automated integration/browser tests use separate local test databases. Attachments (Phase 3.3), advanced conversations (3.4), live notifications/SLA automation (4), and deployment (5) remain deferred.
+Only perform these intentional demo writes on tickets you choose. Automated integration/browser tests use separate local test databases. See [attachments and conversations](attachments-conversations.md) and [Phase 4 live notifications/SLA automation](phase4-operations.md) for the integrated additions. Deployment remains Phase 5 work.

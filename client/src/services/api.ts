@@ -115,3 +115,21 @@ export function queryString(values: Record<string, string | number | undefined>)
   });
   return params.toString();
 }
+
+export async function downloadReport(query: string, filename: string) {
+  const response = await fetch(apiUrl + '/reports/export?' + query, {
+    credentials: 'include',
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    if (response.status === 401) onUnauthorized();
+    throw new ApiError(response.status, data?.error?.message ?? 'Report export failed');
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
