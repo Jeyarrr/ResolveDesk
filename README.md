@@ -25,6 +25,8 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 
 ## Development status
 
+**Phase 4.5: Premium analytics interface.** A coordinated dark-violet redesign now covers all three role dashboards, reporting, ticket workflows, notifications, login, and settings. The frontend continues using the existing PostgreSQL-backed APIs. See the [UI design and verification guide](docs/phase45-ui.md).
+
 **Phase 4: Real-time operations, persistent notifications, SLA automation and reporting.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
 
 Phase 3.1 adds structured resolution summaries, employee confirmation, reasoned reopening, audited administrator closure/reopening, lifecycle progress, and version checks for conflicting requests. See the [lifecycle rules and walkthrough](docs/ticket-lifecycle.md).

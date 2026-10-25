@@ -1,3 +1,5 @@
+import { Ticket, ShieldCheck, Clock3, Timer, Download } from 'lucide-react';
+import { MetricCard } from '../../components/shared/metric-card';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApi } from '../../hooks/use-api';
@@ -34,8 +36,12 @@ export default function ReportsPage() {
         title="Reports & analytics"
         description="Filtered ticket creation cohorts, Manila calendar dates. SLA durations use business minutes; reopen cycles remain separate."
       />
-      <Card title="Report filters">
-        <div className="grid gap-3 px-6 pb-6 sm:grid-cols-2 lg:grid-cols-4">
+      <Card
+        title="Report filters"
+        className="report-toolbar"
+        subtitle="Choose a cohort to explore its workload and service outcomes."
+      >
+        <div className="report-filters">
           <label className="label">
             Report date range
             <select
@@ -113,12 +119,13 @@ export default function ReportsPage() {
             </label>
           ))}
         </div>
-        <div className="flex flex-wrap gap-2 px-6 pb-6">
+        <div className="report-exports">
           {['summary', 'performance', 'agents', 'sla'].map((format) => (
             <Button
               key={format}
               size="sm"
               variant="outline"
+              aria-busy={busy}
               disabled={busy || !d || q.isFetching}
               onClick={async () => {
                 setBusy(true);
@@ -135,9 +142,15 @@ export default function ReportsPage() {
                 }
               }}
             >
+              <Download size={14} aria-hidden="true" />
               Export {format} CSV
             </Button>
           ))}
+          {busy && (
+            <span role="status" className="self-center text-xs text-muted-foreground">
+              Preparing CSV…
+            </span>
+          )}
         </div>
       </Card>
       <QueryState query={q} />
@@ -149,7 +162,48 @@ export default function ReportsPage() {
               No tickets match these filters. Choose a different date range or clear a filter.
             </InlineMessage>
           )}
-          <Card title="Selected cohort">
+          <div className="metrics-grid report-metrics">
+            <MetricCard
+              label="Ticket volume"
+              value={d.metrics.total}
+              note="Tickets created in the selected cohort"
+              icon={Ticket}
+              history={d.series.map((v) => v.received)}
+              historyLabel="Cohort ticket creation trend"
+            />
+            <MetricCard
+              label="SLA compliance"
+              value={d.metrics.compliance === null ? '—' : number(d.metrics.compliance) + '%'}
+              note="Completed cycles · both targets met"
+              icon={ShieldCheck}
+              tone="green"
+            />
+            <MetricCard
+              label="First response"
+              value={
+                d.metrics.averageResponseMinutes === null
+                  ? '—'
+                  : number(d.metrics.averageResponseMinutes)
+              }
+              note="Mean business minutes"
+              icon={Clock3}
+              tone="sky"
+            />
+            <MetricCard
+              label="Resolution time"
+              value={
+                d.metrics.averageResolutionMinutes === null
+                  ? '—'
+                  : number(d.metrics.averageResolutionMinutes)
+              }
+              note="Mean business minutes"
+              icon={Timer}
+            />
+          </div>
+          <details className="card cohort-details">
+            <summary>
+              Selected cohort <span>View all measurements</span>
+            </summary>
             <dl className="grid grid-cols-2 gap-4 px-6 pb-6 lg:grid-cols-4">
               {Object.entries({
                 'Total tickets': d.metrics.total,
@@ -176,8 +230,8 @@ export default function ReportsPage() {
                 </div>
               ))}
             </dl>
-          </Card>
-          <div className="dashboard-chart-grid">
+          </details>
+          <div className="reports-chart-grid">
             <Card title="Ticket volume trend">
               <OperationsChart
                 title="Ticket volume"

@@ -20,7 +20,7 @@ export function TicketTable({
       />
     );
   return (
-    <div className="table-scroll">
+    <div className="table-scroll" role="region" aria-label="Ticket list" tabIndex={0}>
       <table className={`data-table ${compact ? 'table-compact' : ''}`}>
         <caption className="sr-only">Support tickets. Open a subject to view its details.</caption>
         <thead>

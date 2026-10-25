@@ -1,3 +1,4 @@
+import { useId, useState } from 'react';
 import {
   Area,
   AreaChart,
@@ -15,7 +16,7 @@ import {
 import type { Ticket, User } from '../../types/domain';
 import { distribution, performance, volumeSeries } from './selectors';
 import { EmptyState } from '../../components/shared/primitives';
-const COLORS = ['#8b86f5', '#60a5fa', '#f6b85c', '#52cfa1', '#8b98aa'];
+import { chartColor } from './chart-colors';
 const tooltipStyle = {
   background: 'var(--popover)',
   border: '1px solid var(--border)',
@@ -23,7 +24,7 @@ const tooltipStyle = {
   color: 'var(--foreground)',
   fontSize: 12,
 };
-const axis = { fontSize: 10, fill: 'var(--muted-foreground)' };
+const axis = { fontSize: 11, fill: 'var(--muted-foreground)' };
 export function VolumeChart({
   tickets = [],
   days = 14,
@@ -33,6 +34,7 @@ export function VolumeChart({
   days?: number;
   series?: { label: string; received: number; resolved: number }[];
 }) {
+  const gradientId = useId();
   const data = series ?? volumeSeries(tickets, days);
   return (
     <div
@@ -43,9 +45,9 @@ export function VolumeChart({
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <AreaChart data={data} margin={{ top: 10, right: 12, left: -24, bottom: 0 }}>
           <defs>
-            <linearGradient id="volume-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b86f5" stopOpacity={0.23} />
-              <stop offset="100%" stopColor="#8b86f5" stopOpacity={0} />
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--chart-violet)" stopOpacity={0.35} />
+              <stop offset="100%" stopColor="var(--chart-violet)" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke="var(--border)" vertical={false} strokeDasharray="3 5" />
@@ -63,8 +65,8 @@ export function VolumeChart({
             type="monotone"
             name="Received"
             dataKey="received"
-            stroke="#8b86f5"
-            fill="url(#volume-fill)"
+            stroke="var(--chart-violet)"
+            fill={`url(#${gradientId})`}
             strokeWidth={2.5}
             isAnimationActive={false}
           />
@@ -72,7 +74,7 @@ export function VolumeChart({
             type="monotone"
             name="Resolved"
             dataKey="resolved"
-            stroke="#52cfa1"
+            stroke="var(--chart-green)"
             fill="transparent"
             strokeWidth={2}
             isAnimationActive={false}
@@ -91,7 +93,11 @@ export function DistributionChart({
   kind?: 'status' | 'priority';
   counts?: { name: string; value: number }[];
 }) {
-  const data = counts ?? distribution(tickets, kind);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const data = (counts ?? distribution(tickets, kind)).map((item) => ({
+    ...item,
+    name: item.name.replaceAll('_', ' '),
+  }));
   const total = data.reduce((s, d) => s + d.value, 0);
   if (!total) return <EmptyState description="Create a ticket to see a distribution." />;
   return (
@@ -114,7 +120,11 @@ export function DistributionChart({
               isAnimationActive={false}
             >
               {data.map((d, i) => (
-                <Cell key={d.name} fill={COLORS[i]} />
+                <Cell
+                  key={d.name}
+                  fill={chartColor(d.name, i)}
+                  opacity={highlight && highlight !== d.name ? 0.2 : 1}
+                />
               ))}
             </Pie>
             <Tooltip contentStyle={tooltipStyle} />
@@ -127,13 +137,25 @@ export function DistributionChart({
       </div>
       <div className="distribution-legend">
         {data.map((item, i) => (
-          <div key={item.name}>
+          <button
+            type="button"
+            key={item.name}
+            aria-pressed={highlight === item.name}
+            aria-label={`Highlight ${item.name}`}
+            onClick={() => setHighlight(highlight === item.name ? null : item.name)}
+          >
             <span className="flex items-center gap-2">
-              <span className="size-2 rounded-full" style={{ background: COLORS[i] }} />
+              <span
+                className="size-2 rounded-full"
+                style={{ background: chartColor(item.name, i) }}
+              />
               {item.name}
             </span>
-            <strong>{item.value}</strong>
-          </div>
+            <strong>
+              {item.value}
+              <small>{Math.round((item.value / total) * 100)}%</small>
+            </strong>
+          </button>
         ))}
       </div>
     </div>
@@ -153,7 +175,7 @@ export function PerformanceChart({
     <div
       className="chart-area"
       role="img"
-      aria-label={`Agent performance. ${data.map((d) => `${d.name}: ${d.resolved} resolved of ${d.assigned} assigned`).join('. ')}`}
+      aria-label={`Agent workload. ${data.map((d) => `${d.name}: ${d.resolved} resolved of ${d.assigned} assigned`).join('. ')}`}
     >
       <ResponsiveContainer width="100%" height="100%" minWidth={0}>
         <BarChart data={data} margin={{ left: -24, top: 10, right: 10 }}>
@@ -164,7 +186,7 @@ export function PerformanceChart({
           <Bar
             dataKey="assigned"
             name="Assigned"
-            fill="#8b86f5"
+            fill="var(--chart-violet)"
             radius={[4, 4, 0, 0]}
             maxBarSize={24}
             isAnimationActive={false}
@@ -172,7 +194,7 @@ export function PerformanceChart({
           <Bar
             dataKey="resolved"
             name="Resolved"
-            fill="#52cfa1"
+            fill="var(--chart-green)"
             radius={[4, 4, 0, 0]}
             maxBarSize={24}
             isAnimationActive={false}

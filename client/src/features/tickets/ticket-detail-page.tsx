@@ -61,9 +61,8 @@ export default function TicketDetailPage() {
       </div>
       {message && <InlineMessage>{message}</InlineMessage>}
       {mutation.error && <InlineMessage error>{mutation.error.message}</InlineMessage>}
-      <div className="form-layout mt-6">
+      <div className="form-layout ticket-detail-layout mt-6">
         <div className="space-y-5">
-          <TicketSlaPanel ticketId={t.id} />
           <TicketLifecycle
             ticket={t}
             busy={mutation.isPending}
@@ -168,6 +167,7 @@ export default function TicketDetailPage() {
           </Card>
         </div>
         <aside className="space-y-5">
+          <TicketSlaPanel ticketId={t.id} />
           <Card title="Ticket details">
             <dl className="ticket-properties">
               <div>

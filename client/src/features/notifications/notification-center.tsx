@@ -84,9 +84,11 @@ export function NotificationList({
         return (
           <article
             key={n.id}
-            className={`flex gap-3 rounded-xl border p-3 ${n.readAt ? 'border-border' : 'border-primary/40 bg-primary/5'}`}
+            className={`notification-item flex gap-3 rounded-xl border p-3 ${n.readAt ? 'border-border' : 'notification-unread border-primary/40 bg-primary/5'}`}
           >
-            <Icon size={18} className="mt-1 shrink-0 text-primary" />
+            <span className="notification-icon">
+              <Icon size={18} />
+            </span>
             <div className="min-w-0 flex-1 space-y-2">
               <Link
                 className="block break-words text-sm font-medium hover:underline"

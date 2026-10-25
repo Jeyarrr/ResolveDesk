@@ -226,6 +226,10 @@ export function AppShell() {
               <Dropdown.Trigger asChild>
                 <button className="profile-trigger" aria-label="Open profile menu">
                   <Avatar user={user} />
+                  <span className="profile-summary">
+                    <strong>{user.name}</strong>
+                    <small>{roleLabels[user.role]}</small>
+                  </span>
                   <ChevronDown size={12} />
                 </button>
               </Dropdown.Trigger>
@@ -269,7 +273,7 @@ export function AppShell() {
             ResolveDesk <span className="text-border">/</span> A calmer way to support.
           </span>
           <span>
-            Phase 4 <span className="mx-2">·</span> BuiltByJayr
+            Phase 4.5 <span className="mx-2">·</span> BuiltByJayr
           </span>
         </footer>
       </div>

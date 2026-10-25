@@ -1,4 +1,5 @@
 import { SlaDashboard } from '../tickets/sla';
+import { NotificationList } from '../notifications/notification-center';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
@@ -8,7 +9,8 @@ import {
   CircleDot,
   CheckCheck,
   Users,
-  Clock3,
+  ShieldCheck,
+  AlertTriangle,
   Plus,
   BookOpen,
   Activity,
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../app/context';
 import { useApi } from '../../hooks/use-api';
+import type { SlaOverview } from '../../services/operations-contracts';
 import { formatDate } from '../../lib/utils';
 import { articles } from '../../data/seed';
 import {
@@ -35,6 +38,7 @@ export default function DashboardPage() {
   const { user } = useApp();
   const [days, setDays] = useState(14);
   const query = useApi<Analytics>('/analytics/dashboard?days=' + days);
+  const sla = useApi<SlaOverview>('/sla/overview');
   if (!user || !query.data) return <QueryState query={query} />;
   const d = query.data,
     admin = user.role === 'admin',
@@ -46,31 +50,35 @@ export default function DashboardPage() {
       value: d.total,
       note: admin ? 'Across your organization' : 'Your support workspace',
       icon: Ticket,
+      history: user.role === 'employee' ? undefined : d.series.map((v) => v.received),
+      historyLabel: `Tickets received over the last ${days} days`,
     },
     {
-      label: 'Open tickets',
-      value: count('open'),
-      note: 'Ready for attention',
+      label: admin ? 'Open tickets' : agent ? 'Critical tickets' : 'Active requests',
+      value: admin
+        ? count('open')
+        : agent
+          ? (d.priority.find((v) => v.name === 'critical')?.value ?? 0)
+          : count('open') + count('in_progress') + count('pending'),
+      note: agent ? 'Critical priority requests' : 'Ready for attention',
       icon: CircleDot,
       tone: 'amber',
     },
-    ...(admin
-      ? []
-      : [
-          {
-            label: agent ? 'Pending tickets' : 'In progress',
-            value: count(agent ? 'pending' : 'in_progress'),
-            note: 'Moving toward a resolution',
-            icon: Activity,
-            tone: 'sky',
-          },
-        ]),
+    {
+      label: agent ? 'Pending tickets' : 'In progress',
+      value: count(agent ? 'pending' : 'in_progress'),
+      note: 'Moving toward a resolution',
+      icon: Activity,
+      tone: 'sky',
+    },
     {
       label: 'Resolved tickets',
       value: count('resolved') + count('closed'),
       note: 'Resolved and closed requests',
       icon: CheckCheck,
       tone: 'green',
+      history: user.role === 'employee' ? undefined : d.series.map((v) => v.resolved),
+      historyLabel: `Tickets resolved over the last ${days} days`,
     },
     ...(admin
       ? [
@@ -81,11 +89,22 @@ export default function DashboardPage() {
             icon: Users,
           },
           {
-            label: 'Avg. resolution time',
-            value: d.average === null ? '—' : d.average.toFixed(1) + 'h',
-            note: 'Completed tickets',
-            icon: Clock3,
+            label: 'SLA compliance',
+            value: sla.data?.compliance == null ? '—' : sla.data.compliance.toFixed(1) + '%',
+            note: sla.data
+              ? 'Completed cycles · both targets'
+              : sla.isError
+                ? 'SLA unavailable'
+                : 'Loading SLA measurements',
+            icon: ShieldCheck,
             tone: 'sky',
+          },
+          {
+            label: 'Critical tickets',
+            value: d.priority.find((v) => v.name === 'critical')?.value ?? 0,
+            note: 'Critical priority requests',
+            icon: AlertTriangle,
+            tone: 'amber',
           },
         ]
       : []),
@@ -132,8 +151,7 @@ export default function DashboardPage() {
         }
       />
       <QueryState query={query} />
-      <SlaDashboard />
-      <div className={'metrics-grid ' + (admin ? 'metrics-six' : '')}>
+      <div className={'metrics-grid ' + (admin ? 'metrics-operations' : '')}>
         {stats.map((s) => (
           <MetricCard key={s.label} {...s} />
         ))}
@@ -160,11 +178,11 @@ export default function DashboardPage() {
           >
             <div className="chart-legend">
               <span>
-                <i style={{ background: '#8b86f5' }} />
+                <i style={{ background: 'var(--chart-violet)' }} />
                 Received
               </span>
               <span>
-                <i style={{ background: '#52cfa1' }} />
+                <i style={{ background: 'var(--chart-green)' }} />
                 Resolved
               </span>
             </div>
@@ -205,6 +223,7 @@ export default function DashboardPage() {
           />
         </Card>
       </div>
+      <SlaDashboard />
       <Card
         className="mt-5 overflow-hidden"
         title={agent ? 'Assigned ticket queue' : 'Recent tickets'}
@@ -236,12 +255,24 @@ export default function DashboardPage() {
             )}
           </div>
         </Card>
-        {agent ? (
-          <Card title="Service target guidance">
-            <p className="px-6 pb-6 text-sm text-muted-foreground">
-              The first public support reply satisfies the response target. Internal notes do not
-              count. Pending tickets continue consuming business time.
-            </p>
+        {!admin ? (
+          <Card
+            title={agent ? 'Support updates' : 'Updates from your support team'}
+            subtitle={
+              agent
+                ? 'Recent assignments, replies, and escalations'
+                : 'Recent replies and changes to your requests'
+            }
+          >
+            <div className="px-6 pb-6">
+              <NotificationList compact />
+            </div>
+            {agent && (
+              <p className="px-6 pb-6 text-xs text-muted-foreground">
+                The first public support reply satisfies the response target. Internal notes do not
+                count. Pending tickets continue consuming business time.
+              </p>
+            )}
           </Card>
         ) : (
           <Card
@@ -273,7 +304,21 @@ export default function DashboardPage() {
       {admin && (
         <>
           <div className="dashboard-chart-grid mt-5">
-            <Card title="Agent workload" subtitle="Top 20 agents by current assigned ticket count">
+            <Card
+              title="Agent workload"
+              subtitle="Current assignments · volume is not a performance ranking"
+              action={<TextLink to="/reports">SLA & response metrics</TextLink>}
+            >
+              <div className="chart-legend">
+                <span>
+                  <i style={{ background: 'var(--chart-violet)' }} />
+                  Assigned
+                </span>
+                <span>
+                  <i style={{ background: 'var(--chart-green)' }} />
+                  Resolved
+                </span>
+              </div>
               <PerformanceChart series={d.performance} />
             </Card>
             <Card title="Priority breakdown" subtitle="Organization requests">
@@ -287,6 +332,10 @@ export default function DashboardPage() {
               <h2>Keep your support team in sync</h2>
               <p>
                 {d.activeAgents} active agents · {d.unassigned} unassigned requests
+              </p>
+              <p>
+                Mean elapsed resolution:{' '}
+                {d.average === null ? 'No completed tickets' : `${d.average.toFixed(1)} hours`}
               </p>
             </div>
             <Button asChild variant="outline">

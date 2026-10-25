@@ -6,7 +6,7 @@ import type { User } from '../../types/domain';
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+      <span className="brand-symbol flex size-9 shrink-0 items-center justify-center rounded-xl text-white">
         <LifeBuoy size={22} strokeWidth={2.4} />
       </span>
       {!compact && (
@@ -121,12 +121,17 @@ export function EmptyState({
 }
 export function Loading({ label = 'Loading your workspace…' }: { label?: string }) {
   return (
-    <div
-      className="flex min-h-52 items-center justify-center gap-3 text-sm text-muted-foreground"
-      role="status"
-    >
-      <LoaderCircle className="motion-safe:animate-spin" size={18} />
-      {label}
+    <div className="workspace-loading text-sm text-muted-foreground" role="status">
+      <span className="flex items-center justify-center gap-3">
+        <LoaderCircle className="motion-safe:animate-spin" size={18} />
+        {label}
+      </span>
+      <div className="loading-skeletons" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+      </div>
     </div>
   );
 }

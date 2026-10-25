@@ -96,6 +96,7 @@ export function SlaDashboard() {
   const d = q.data;
   return (
     <Card
+      className="sla-overview mt-5"
       title={user?.role === 'admin' ? 'SLA operations' : 'My service targets'}
       subtitle="Current cycles; completed compliance requires both targets met."
     >
@@ -106,30 +107,58 @@ export function SlaDashboard() {
             cohorts.
           </InlineMessage>
         )}
-        <dl className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Object.entries({
-            'Tracked tickets': d.tracked,
-            'Completed within target': d.compliant,
-            'Approaching deadline': d.approaching,
-            'Response breaches': d.responseBreached,
-            'Resolution breaches': d.resolutionBreached,
-            'Completed compliance':
-              d.compliance === null ? 'No completed cycles' : `${d.compliance.toFixed(1)}%`,
-            'High priority active': d.highPriority,
-            ...(user?.role === 'employee'
-              ? {}
-              : {
-                  'Average first response': minutes(d.averageResponseMinutes),
-                  'Average resolution': minutes(d.averageResolutionMinutes),
-                }),
-          }).map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-xs text-muted-foreground">{label}</dt>
-              <dd className="mt-1 text-sm font-semibold">{value}</dd>
+        <div className="sla-summary">
+          <div className="sla-gauge">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="var(--border)" strokeWidth="7" />
+              {d.compliance !== null && (
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  fill="none"
+                  stroke="var(--chart-violet)"
+                  strokeWidth="7"
+                  strokeLinecap="round"
+                  pathLength="100"
+                  strokeDasharray={`${d.compliance} 100`}
+                  transform="rotate(-90 60 60)"
+                />
+              )}
+            </svg>
+            <div>
+              <strong>{d.compliance === null ? '—' : `${d.compliance.toFixed(1)}%`}</strong>
+              <span>Compliance</span>
             </div>
-          ))}
-        </dl>
-        <div className="space-y-2">
+            <p>
+              Both targets met
+              <br />
+              {d.compliant} / {d.completed} completed cycles
+            </p>
+          </div>
+          <dl className="sla-measurements">
+            {Object.entries({
+              'Tracked tickets': d.tracked,
+              'Completed within target': d.compliant,
+              'Approaching deadline': d.approaching,
+              'Response breaches': d.responseBreached,
+              'Resolution breaches': d.resolutionBreached,
+              'High priority active': d.highPriority,
+              ...(user?.role === 'employee'
+                ? {}
+                : {
+                    'Average first response': minutes(d.averageResponseMinutes),
+                    'Average resolution': minutes(d.averageResolutionMinutes),
+                  }),
+            }).map(([label, value]) => (
+              <div key={label}>
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="mt-1 text-sm font-semibold">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+        <div className="sla-deadlines">
           {d.items.slice(0, 10).map((t) => (
             <Link
               key={t.id}

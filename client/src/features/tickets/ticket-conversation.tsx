@@ -99,7 +99,7 @@ export function TicketConversation({ ticketId }: { ticketId: string }) {
         {comments.data?.map((c) => (
           <article
             key={c.id}
-            className={`comment ${c.isInternal ? 'rounded-xl border border-violet-500/30 bg-violet-500/5 p-3' : ''}`}
+            className={`comment ${c.isInternal ? 'comment-internal rounded-xl border border-violet-500/30 bg-violet-500/5 p-3' : ''}`}
           >
             <Avatar user={c.author} />
             <div className="min-w-0 flex-1 space-y-3">
@@ -125,7 +125,7 @@ export function TicketConversation({ ticketId }: { ticketId: string }) {
           </p>
         )}
         <form
-          className="space-y-4 border-t border-border pt-5"
+          className="conversation-composer space-y-4 border-t border-border pt-5"
           onSubmit={async (e) => {
             e.preventDefault();
             const cancel = new AbortController();
