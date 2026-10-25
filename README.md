@@ -25,9 +25,11 @@ George has the `agent` role and belongs to the HR department. The demo credentia
 
 ## Development status
 
+**Vercel + Neon deployment preparation:** the repository now includes one Vercel project for the React frontend and Express API, Neon connection settings, private Blob attachments, authenticated cloud polling, and a protected SLA scheduler. Follow the [deployment guide](docs/deployment.md) to create the cloud resources, apply migrations, and deploy. These code changes do not create a live site or copy the local database. The default schedule supports Vercel Hobby; timely unattended SLA automation requires the external scheduler described in the guide.
+
 **Phase 4.5: Premium analytics interface.** A coordinated dark-violet redesign now covers all three role dashboards, reporting, ticket workflows, notifications, login, and settings. The frontend continues using the existing PostgreSQL-backed APIs. See the [UI design and verification guide](docs/phase45-ui.md).
 
-**Phase 4: Real-time operations, persistent notifications, SLA automation and reporting.** ResolveDesk runs against the existing local PostgreSQL database managed through pgAdmin 4. React connects to the Express API and persists ticket workflows locally. Neon is reserved for a future deployment milestone; it is not configured or required for current development.
+**Phase 4: Real-time operations, persistent notifications, SLA automation and reporting.** Local development uses PostgreSQL managed through pgAdmin 4. Cloud deployments use Neon and private Vercel Blob storage. Local development does not require cloud credentials.
 
 Phase 3.1 adds structured resolution summaries, employee confirmation, reasoned reopening, audited administrator closure/reopening, lifecycle progress, and version checks for conflicting requests. See the [lifecycle rules and walkthrough](docs/ticket-lifecycle.md).
 

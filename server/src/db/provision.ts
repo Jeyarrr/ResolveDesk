@@ -5,9 +5,12 @@ import { email, password } from '../validation/schemas.js';
 import { users, sessions } from './schema.js';
 import { hashPassword } from '../services/auth.js';
 const config = readConfig();
-if (config.NODE_ENV !== 'development')
+if (
+  config.NODE_ENV !== 'development' &&
+  !(config.NODE_ENV === 'production' && process.env.CONFIRM_PRODUCTION_PASSWORD === 'yes')
+)
   throw new Error(
-    'Password provisioning is development-only; production onboarding requires a verified delivery workflow.',
+    'For production, explicitly set CONFIRM_PRODUCTION_PASSWORD=yes after verifying the recipient identity and secure password delivery.',
   );
 const address = email.safeParse(process.env.PROVISION_EMAIL),
   secret = password.safeParse(process.env.PROVISION_PASSWORD);
@@ -15,7 +18,11 @@ if (!address.success || !secret.success)
   throw new Error(
     'Set PROVISION_EMAIL and PROVISION_PASSWORD (12–128 characters) in the ignored server environment.',
   );
-const { db, pool } = connectDatabase(config);
+const { db, pool } = connectDatabase({
+  ...config,
+  DATABASE_URL: config.DIRECT_DATABASE_URL ?? config.DATABASE_URL,
+  DB_POOL_MAX: 1,
+});
 try {
   const hash = await hashPassword(secret.data);
   await db.transaction(async (tx) => {
@@ -29,7 +36,7 @@ try {
     await tx.update(sessions).set({ revokedAt: new Date() }).where(eq(sessions.userId, row.id));
   });
   console.log(
-    'Development password provisioned and sessions revoked. Remove PROVISION_PASSWORD from your environment.',
+    'Password provisioned and sessions revoked. Remove PROVISION_PASSWORD from your environment.',
   );
 } catch {
   console.error('Provisioning failed; check account existence and database connectivity.');

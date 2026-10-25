@@ -10,11 +10,17 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/migrate.ts",
+    "db:migrate:production": "node dist/db/migrate.js",
+    "db:bootstrap": "tsx src/db/bootstrap.ts",
+    "db:bootstrap:production": "node dist/db/bootstrap.js",
+    "user:password:production": "node dist/db/provision.js",
     "db:seed": "tsx src/db/seed-cli.ts",
     "user:password": "tsx src/db/provision.ts",
     "storage:audit": "tsx src/db/storage-audit.ts"
   },
   "dependencies": {
+    "@vercel/blob": "2.4.0",
+    "@vercel/functions": "3.6.1",
     "argon2": "^0.45.1",
     "busboy": "^1.6.0",
     "cookie-parser": "^1.4.7",

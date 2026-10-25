@@ -10,6 +10,12 @@ import { controllers } from '../controllers/api-controller.js';
 import { collaborationController } from '../controllers/collaboration-controller.js';
 import { loginInput } from '../validation/schemas.js';
 import { profile } from '../repositories/users.js';
+import { timingSafeEqual } from 'node:crypto';
+import { AppError } from '../middleware/errors.js';
+import { prepareUploads } from '../services/direct-upload.js';
+import { runOperations, sharedLoginLimit, takeQuota } from '../services/runtime.js';
+import { cleanupBlobs } from '../services/blob-storage.js';
+import { z } from 'zod';
 export function apiRouter(db: Database, config: Config) {
   const router = Router(),
     auth = authService(db, config),
@@ -21,16 +27,41 @@ export function apiRouter(db: Database, config: Config) {
     next();
   });
   router.get('/health', healthController(db));
+  const schedulerGuard = (authorization: string | undefined) => {
+    const expected = `Bearer ${config.CRON_SECRET ?? ''}`;
+    if (
+      !config.CRON_SECRET ||
+      !authorization ||
+      Buffer.byteLength(authorization) !== Buffer.byteLength(expected) ||
+      !timingSafeEqual(Buffer.from(authorization), Buffer.from(expected))
+    )
+      throw new AppError(401, 'Scheduler authorization required');
+  };
+  router.get('/operations/run', async (req, res) => {
+    schedulerGuard(req.get('authorization'));
+    await runOperations(db);
+    res.json({ success: true, data: { completed: true } });
+  });
+  router.get('/operations/storage', async (req, res) => {
+    schedulerGuard(req.get('authorization'));
+    const cursor = z.string().max(2000).optional().parse(req.query.cursor);
+    res.json({ success: true, data: await cleanupBlobs(db, config, cursor) });
+  });
   router.get('/auth/csrf', guard.bootstrap);
   router.post(
     '/auth/login',
-    rateLimit({
-      windowMs: 15 * 60_000,
-      limit: 20,
-      standardHeaders: 'draft-8',
-      legacyHeaders: false,
-      message: { success: false, error: { message: 'Too many login attempts. Try again later.' } },
-    }),
+    config.SERVERLESS
+      ? sharedLoginLimit(db, config)
+      : rateLimit({
+          windowMs: 15 * 60_000,
+          limit: 20,
+          standardHeaders: 'draft-8',
+          legacyHeaders: false,
+          message: {
+            success: false,
+            error: { message: 'Too many login attempts. Try again later.' },
+          },
+        }),
     guard.csrf,
     async (req, res) => {
       const input = loginInput.parse(req.body);
@@ -58,6 +89,27 @@ export function apiRouter(db: Database, config: Config) {
     res.json({
       success: true,
       data: { user: await profile(db, req.actor.id), csrfToken: auth.csrf(req.sessionToken) },
+    }),
+  );
+  router.get('/runtime', (_req, res) =>
+    res.json({
+      success: true,
+      data: {
+        realtime: config.SERVERLESS ? 'polling' : 'websocket',
+        directUpload: config.STORAGE_DRIVER === 'blob',
+      },
+    }),
+  );
+  router.get('/events/sync', async (req, res) => {
+    if (!(await takeQuota(db, 'sync:' + req.actor.id, 60, 60)))
+      throw new AppError(429, 'Please wait before refreshing again');
+    await runOperations(db);
+    res.json({ success: true, data: { refresh: true } });
+  });
+  router.post('/uploads/prepare', async (req, res) =>
+    res.json({
+      success: true,
+      data: await prepareUploads(db, config, req.actor, req.body),
     }),
   );
   router.post('/auth/logout', async (req, res) => {
@@ -109,6 +161,6 @@ export function apiRouter(db: Database, config: Config) {
   router.post('/response-templates', requireRole('agent', 'admin'), c.createTemplate);
   router.patch('/response-templates/:id', requireRole('agent', 'admin'), c.updateTemplate);
   router.delete('/response-templates/:id', requireRole('agent', 'admin'), c.archiveTemplate);
-  router.use(operationsRouter(db));
+  router.use(operationsRouter(db, config));
   return router;
 }

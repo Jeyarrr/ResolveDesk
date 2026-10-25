@@ -7,6 +7,17 @@ const schema = z
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
     HOST: z.string().default('127.0.0.1'),
     DATABASE_URL: z.url().refine((v) => /^postgres(ql)?:/.test(v)),
+    DIRECT_DATABASE_URL: z
+      .url()
+      .refine((v) => /^postgres(ql)?:/.test(v))
+      .optional(),
+    STORAGE_DRIVER: z.enum(['local', 'blob']).default('local'),
+    SERVERLESS: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
+    BLOB_READ_WRITE_TOKEN: z.string().min(20).optional(),
+    CRON_SECRET: z.string().min(32).optional(),
     SESSION_SECRET: z
       .string()
       .min(32)
@@ -37,6 +48,8 @@ const schema = z
       });
     if (v.COOKIE_SAME_SITE === 'none' && v.NODE_ENV !== 'production')
       ctx.addIssue({ code: 'custom', message: 'SameSite=None requires production HTTPS cookies' });
+    if (v.STORAGE_DRIVER === 'blob' && !v.BLOB_READ_WRITE_TOKEN)
+      ctx.addIssue({ code: 'custom', message: 'Blob storage requires BLOB_READ_WRITE_TOKEN' });
   });
 export type Config = z.infer<typeof schema>;
 export function readConfig(input = process.env): Config {

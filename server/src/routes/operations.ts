@@ -5,7 +5,9 @@ import { notificationService } from '../services/notifications.js';
 import { slaService } from '../services/sla.js';
 import { reports } from '../services/reports.js';
 import { requireRole } from '../middleware/auth.js';
-export function operationsRouter(db: Database) {
+import type { Config } from '../config/env.js';
+import { AppError } from '../middleware/errors.js';
+export function operationsRouter(db: Database, config?: Config) {
   const router = Router(),
     n = notificationService(db),
     sla = slaService(db);
@@ -49,7 +51,13 @@ export function operationsRouter(db: Database) {
   );
   router.get('/reports/export', requireRole('admin'), async (req, res) => {
     const report = await reports(db, req.actor, req.query);
-    res.attachment(report.filename).type('text/csv').send(report.csv());
+    const content = report.csv();
+    if (config?.SERVERLESS && Buffer.byteLength(content) > 4 * 1024 * 1024)
+      throw new AppError(
+        413,
+        'This export exceeds the cloud response limit. Choose a smaller date range or additional filters.',
+      );
+    res.attachment(report.filename).type('text/csv').send(content);
   });
   return router;
 }

@@ -18,6 +18,7 @@ export function createApp(db: Database, env: Config) {
       credentials: true,
       methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'X-CSRF-Token'],
+      exposedHeaders: ['X-Attachment-Bytes'],
     }),
   );
   app.use(cookieParser());

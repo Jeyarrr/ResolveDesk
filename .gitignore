@@ -36,6 +36,7 @@ out/
 .cache/
 .vite/
 .turbo/
+.vercel/
 .parcel-cache/
 *.tsbuildinfo
 coverage/

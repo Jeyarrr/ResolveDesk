@@ -16,6 +16,16 @@ import {
   foreignKey,
 } from 'drizzle-orm/pg-core';
 export const role = pgEnum('role', ['employee', 'agent', 'admin']);
+// Shared across function instances; also bounds expensive upload and worker requests.
+export const runtimeCounters = pgTable(
+  'runtime_counters',
+  {
+    key: text('key').primaryKey(),
+    count: integer('count').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [index('runtime_counter_expiry_idx').on(t.expiresAt)],
+);
 export const accountStatus = pgEnum('account_status', ['active', 'inactive', 'suspended']);
 export const priority = pgEnum('priority', ['low', 'medium', 'high', 'critical']);
 export const ticketStatus = pgEnum('ticket_status', [

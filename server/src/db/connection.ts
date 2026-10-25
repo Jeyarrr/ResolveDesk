@@ -11,7 +11,7 @@ export function connectDatabase(config: Config) {
   const pool = new pg.Pool({
     connectionString: url.toString(),
     max: config.DB_POOL_MAX,
-    idleTimeoutMillis: 30_000,
+    idleTimeoutMillis: config.SERVERLESS ? 5_000 : 30_000,
     connectionTimeoutMillis: 10_000,
     statement_timeout: 15_000,
     ssl: config.DB_SSL ? { rejectUnauthorized: true } : false,

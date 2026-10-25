@@ -50,6 +50,13 @@
       "when": 1792684800737,
       "tag": "0006_equal_sunspot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792939299344,
+      "tag": "0007_smiling_layla_miller",
+      "breakpoints": true
     }
   ]
 }
