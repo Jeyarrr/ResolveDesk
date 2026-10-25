@@ -17,13 +17,19 @@ const { db, pool } = connectDatabase(config);
 attachDatabasePool(pool);
 const app = createApp(db, config);
 
-export default function handler(req: IncomingMessage, res: ServerResponse) {
+export default function handler(
+  req: IncomingMessage & { query?: Record<string, unknown> },
+  res: ServerResponse,
+) {
   // Vercel expands the catch-all rewrite into a synthetic `path` query key.
   // Remove only that routing value before strict API query validation runs.
   const url = new URL(req.url ?? '/', 'http://localhost');
-  if (url.searchParams.get('path') === url.pathname.replace(/^\/api\/?/, '')) {
+  const routePath = url.pathname.replace(/^\/api\/?/, '');
+  if (url.searchParams.get('path') === routePath) {
     url.searchParams.delete('path');
     req.url = url.pathname + url.search;
   }
+  // The Node function runtime may already have parsed query before Express.
+  if (req.query?.path === routePath) delete req.query.path;
   return app(req, res);
 }
