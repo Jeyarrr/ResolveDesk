@@ -4,7 +4,7 @@ A modern IT Help Desk & Ticket Management System designed to streamline technica
 
 ## Demo accounts
 
-Explore ResolveDesk from three perspectives: Administrator, Employee, and IT Support Agent. The following accounts are configured in the project's current local demo database.
+Explore the [live ResolveDesk demo](https://resolvedesk-iota.vercel.app) from three perspectives: Administrator, Employee, and IT Support Agent. The following accounts are configured in both the live demo and the current local demo database.
 
 | Name   | Role          | Department           | Username | Password |
 | ------ | ------------- | -------------------- | -------- | -------- |
@@ -21,11 +21,11 @@ Start the configured project with `npm run dev`, open [ResolveDesk locally](http
 3. **Agent — George:** Open the assigned ticket, update its status, reply to the employee, and add an internal support note.
 4. **Employee — Mon:** Return to the ticket to view public replies and the updated status. Internal support notes are visible only to support staff and administrators.
 
-George has the `agent` role and belongs to the HR department. The demo credentials above apply to the configured local database; a fresh installation uses the email accounts and seed passwords described in [Local setup](#local-setup).
+George has the `agent` role and belongs to the HR department. A fresh installation uses the email accounts and seed passwords described in [Local setup](#local-setup).
 
 ## Development status
 
-**Vercel + Neon deployment preparation:** the repository now includes one Vercel project for the React frontend and Express API, Neon connection settings, private Blob attachments, authenticated cloud polling, and a protected SLA scheduler. Follow the [deployment guide](docs/deployment.md) to create the cloud resources, apply migrations, and deploy. These code changes do not create a live site or copy the local database. The default schedule supports Vercel Hobby; timely unattended SLA automation requires the external scheduler described in the guide.
+**Live on Vercel + Neon:** [resolvedesk-iota.vercel.app](https://resolvedesk-iota.vercel.app) hosts the React frontend and Express API, with Neon PostgreSQL, private Vercel Blob attachments, authenticated cloud polling, and a protected SLA scheduler. The cloud database contains the three demo identities and reference data; local tickets, sessions, and uploads were not copied. See the [deployment guide](docs/deployment.md) for configuration. The default daily schedule supports Vercel Hobby; timely unattended SLA automation requires the external scheduler described in the guide.
 
 **Phase 4.5: Premium analytics interface.** A coordinated dark-violet redesign now covers all three role dashboards, reporting, ticket workflows, notifications, login, and settings. The frontend continues using the existing PostgreSQL-backed APIs. See the [UI design and verification guide](docs/phase45-ui.md).
 

@@ -1,5 +1,14 @@
 # Deploy ResolveDesk to Vercel and Neon
 
+## Current deployment
+
+- Live demo: https://resolvedesk-iota.vercel.app
+- Vercel project: `resolvedesk` in `jayr-portfolio`; API region: Singapore (`sin1`).
+- Neon project: `ResolveDesk`, production branch, Singapore.
+- Attachments: private Vercel Blob store `resolvedesk-files`.
+- Cloud database migrations and the three documented demo identities are initialized. Local tickets, sessions, and uploads were not copied.
+- Hobby runs the scheduled SLA job daily; active sessions also trigger the shared worker through polling. An external scheduler is still needed for timely unattended SLA processing.
+
 ## Prepared architecture
 
 One Vercel project serves the React frontend and Express API at the same origin. Neon stores PostgreSQL data; a **private Vercel Blob store** holds attachments. Code preparation does not create cloud resources, copy local data, or publish a site.
@@ -21,7 +30,7 @@ Local environment files, accounts, tickets and uploads are unchanged. Local comm
 1. In **Neon → New project**, create **ResolveDesk** and its production database. Choose a region close to your Vercel function region. Keep it separate from other projects such as eDTR.
 2. In Neon **Connect**, privately copy the pooled URL (hostname contains `-pooler`) and the direct URL.
 3. Push these deployment changes to GitHub. In **Vercel → Create New → Project**, import ResolveDesk.
-4. Set **Root Directory: repository root (`.`)**, **Framework Preset: Other**, **Node.js: 24.x**. The root `vercel.json` configures `npm ci`, `npm run build`, and output `client/dist`. Do not choose `client` as the root: that omits the API.
+4. Set **Root Directory: repository root (`.`)**, **Framework Preset: Other**, **Node.js: 24.x**. The root `vercel.json` configures `npm ci --include=dev`, `npm run build`, and output `client/dist`. Do not choose `client` as the root: that omits the API.
 5. Connect a **private** Vercel Blob store to the project, scoped to Production. Confirm the access setting; a public store is unsuitable for ticket attachments.
 
 Creating these resources and clicking Deploy are separate steps. Until completed, ResolveDesk will not appear as a deployed project on either dashboard.
