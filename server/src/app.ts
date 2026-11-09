@@ -7,6 +7,7 @@ import type { Config } from './config/env.js';
 import type { Database } from './db/connection.js';
 import { apiRouter } from './routes/index.js';
 import { errorHandler, notFound } from './middleware/errors.js';
+import { isAllowedOrigin } from './config/origin.js';
 export function createApp(db: Database, env: Config) {
   const app = express();
   app.disable('x-powered-by');
@@ -14,7 +15,7 @@ export function createApp(db: Database, env: Config) {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.CLIENT_ORIGIN,
+      origin: (origin, callback) => callback(null, isAllowedOrigin(origin, env)),
       credentials: true,
       methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'X-CSRF-Token'],

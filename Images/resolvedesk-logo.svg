@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><defs><radialGradient id="background"><stop stop-color="#28105F"/><stop offset="1" stop-color="#080414"/></radialGradient><linearGradient id="word" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#C19AFF"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs><rect width="1024" height="1024" fill="#080414"/><ellipse cx="50" cy="0" rx="650" ry="500" fill="url(#background)" opacity=".75"/><ellipse cx="1024" cy="1024" rx="700" ry="450" fill="url(#background)"/><svg x="337" y="156" width="350" height="372" viewBox="0 0 128 136" fill="none">
+  <defs>
+    <linearGradient id="shield" x1="30" y1="8" x2="99" y2="126" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#B98AFF"/><stop offset=".48" stop-color="#8B3FF4"/><stop offset="1" stop-color="#4C13B7"/>
+    </linearGradient>
+    <linearGradient id="ticket" x1="41" y1="46" x2="92" y2="91" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#D9C6FF"/>
+    </linearGradient>
+    <linearGradient id="circuit" x1="31" y1="34" x2="68" y2="108" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A96FFF"/><stop offset=".55" stop-color="#CAAAFF"/><stop offset="1" stop-color="#8640E6"/>
+    </linearGradient>
+    <linearGradient id="check" x1="82" y1="80" x2="107" y2="109" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#AB64FF"/><stop offset="1" stop-color="#6415D8"/>
+    </linearGradient>
+  </defs>
+  <path d="M59 8a13 13 0 0 1 10 0l38 16a18 18 0 0 1 11 17v30c0 24-18 40-48 57a12 12 0 0 1-12 0C28 111 10 95 10 71V41a18 18 0 0 1 11-17Z" stroke="url(#shield)" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M65 32v4a9 9 0 0 1-9 9H39a14 14 0 0 0-14 14v17M59 106h11a15 15 0 0 0 15-15" stroke="url(#circuit)" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="65" cy="34" r="5" fill="#6220C9" stroke="#FAF7FF" stroke-width="2.5"/>
+  <circle cx="59" cy="107" r="5" fill="#6220C9" stroke="#FAF7FF" stroke-width="2.5"/>
+  <path d="M39 52h59a5 5 0 0 1 5 5v7a8 8 0 0 0 0 16v7a5 5 0 0 1-5 5H36a5 5 0 0 1-5-6l1-6a8 8 0 0 0 1-16l1-7a5 5 0 0 1 5-5Z" fill="url(#ticket)" stroke="#FFFFFF" stroke-width=".7"/>
+  <g fill="#8B4AD9">
+    <circle cx="51" cy="62" r="3"/><circle cx="50" cy="72" r="3"/><circle cx="49" cy="82" r="3" opacity=".6"/>
+  </g>
+  <g stroke="#9B7BC7" stroke-width="4.5" stroke-linecap="round">
+    <path d="M60 62h29M59 72h21M58 82h15"/>
+  </g>
+  <circle cx="92" cy="91" r="15" fill="url(#check)" stroke="#16092E" stroke-width="3"/>
+  <path d="m85.5 91 4.5 4.5 9-10" stroke="#FFF" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+<text x="512" y="664" text-anchor="middle" font-family="Inter,Arial,Helvetica,sans-serif" font-size="118" font-weight="750" letter-spacing="-6" fill="#FAF9FF">Resolve<tspan fill="url(#word)">Desk</tspan></text></svg>

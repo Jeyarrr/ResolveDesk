@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Check, Eye, EyeOff, LoaderCircle, ShieldCheck, Ticket } from 'lucide-react';
+import { ArrowRight, Check, Eye, EyeOff, LoaderCircle, Ticket } from 'lucide-react';
 import { useApp } from '../../app/context';
 import { Button } from '../../components/ui/button';
 import { FieldError, InlineMessage, Logo } from '../../components/shared/primitives';
@@ -51,12 +51,10 @@ function AuthLayout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          A BuiltByJayr project · IT support workspace
-        </p>
+        <p className="text-xs text-muted-foreground">IT support workspace</p>
       </section>
       <section className="auth-form-side">
-        <div className="w-full max-w-[420px]">{children}</div>
+        <div className="auth-form-panel w-full">{children}</div>
       </section>
     </main>
   );
@@ -77,8 +75,8 @@ export function LoginPage() {
   if (user) return <Navigate to="/" replace />;
   return (
     <AuthLayout>
-      <div className="mb-8 flex size-12 items-center justify-center rounded-2xl border border-border bg-accent">
-        <ShieldCheck className="text-primary" size={24} />
+      <div className="mb-8 flex size-12 items-center justify-center">
+        <Logo compact />
       </div>
       <h2 className="text-3xl font-semibold tracking-tight">Welcome to ResolveDesk</h2>
       <p className="mb-7 mt-3 text-sm text-muted-foreground">
@@ -100,7 +98,7 @@ export function LoginPage() {
             setError(errorMessage(e));
           }
         })}
-        className="space-y-5"
+        className="auth-login-form space-y-5"
       >
         <div>
           <label className="label" htmlFor="email">
@@ -144,7 +142,7 @@ export function LoginPage() {
           </div>
           <FieldError id="password-error" message={errors.password?.message} />
         </div>
-        <div className="flex items-center justify-between gap-3 text-xs">
+        <div className="auth-login-options flex items-center justify-between gap-3 text-xs">
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('remember')} />
             Keep me signed in for 7 days

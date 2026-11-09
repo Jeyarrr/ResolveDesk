@@ -1,4 +1,4 @@
-import { Inbox, LoaderCircle, ArrowUpRight, LifeBuoy } from 'lucide-react';
+import { Inbox, LoaderCircle, ArrowUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { cn, initials } from '../../lib/utils';
@@ -6,13 +6,12 @@ import type { User } from '../../types/domain';
 export function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <span className="brand-symbol flex size-9 shrink-0 items-center justify-center rounded-xl text-white">
-        <LifeBuoy size={22} strokeWidth={2.4} />
+      <span className="brand-symbol flex size-10 shrink-0 items-center justify-center">
+        <img src="/resolvedesk-mark.svg" alt={compact ? 'ResolveDesk' : ''} width="40" height="43" />
       </span>
       {!compact && (
-        <span className="text-xl font-bold tracking-[-.7px]">
-          Resolve<span className="font-medium text-muted-foreground">Desk</span>
-          <span className="text-primary">.</span>
+        <span className="text-xl font-bold tracking-[-.7px] text-foreground">
+          Resolve<span className="text-primary">Desk</span>
         </span>
       )}
     </div>

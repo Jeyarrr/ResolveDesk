@@ -2,6 +2,7 @@ import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
+import { createConnection } from 'node:net';
 import { readConfig } from '../server/src/config/env.js';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -83,6 +84,57 @@ function start(name: string, entry: string, args: string[]) {
     );
     void stop(code ?? 1);
   });
+}
+
+async function portInUse(port: number, host: string) {
+  return new Promise<boolean>((resolve) => {
+    const socket = createConnection({ port, host });
+    const finish = (used: boolean) => {
+      socket.destroy();
+      resolve(used);
+    };
+    socket.once('connect', () => finish(true));
+    socket.once('error', () => finish(false));
+    socket.setTimeout(1500, () => finish(true));
+  });
+}
+
+const config = readConfig();
+const [clientBusy, serverBusy] = await Promise.all([
+  portInUse(5173, '127.0.0.1'),
+  portInUse(config.PORT, config.HOST),
+]);
+if (clientBusy || serverBusy) {
+  let alreadyRunning = false;
+  if (clientBusy && serverBusy) {
+    try {
+      const [client, api] = await Promise.all([
+        fetch('http://127.0.0.1:5173', { signal: AbortSignal.timeout(3000) }),
+        fetch(`http://${config.HOST}:${config.PORT}/api/health`, {
+          signal: AbortSignal.timeout(3000),
+        }),
+      ]);
+      const health = (await api.json()) as { data?: { service?: string } };
+      alreadyRunning =
+        client.ok &&
+        api.ok &&
+        health.data?.service === 'resolvedesk-api' &&
+        (await client.text()).includes('<title>ResolveDesk');
+    } catch {
+      // Occupied ports may belong to another app or an unhealthy server.
+    }
+  }
+  if (alreadyRunning) {
+    console.log('ResolveDesk is already running. Open http://127.0.0.1:5173');
+    process.exit(0);
+  }
+  const ports = [clientBusy ? 5173 : null, serverBusy ? config.PORT : null]
+    .filter((port) => port !== null)
+    .join(', ');
+  console.error(
+    `Port(s) ${ports} already in use. Stop the existing development servers with Ctrl+C, then run npm run dev once.`,
+  );
+  process.exit(1);
 }
 
 start('server', 'tsx/dist/cli.mjs', ['watch', 'src/index.ts']);

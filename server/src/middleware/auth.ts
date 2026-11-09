@@ -4,6 +4,7 @@ import type { Actor } from '../db/schema.js';
 import type { Config } from '../config/env.js';
 import type { authService } from '../services/auth.js';
 import { AppError } from './errors.js';
+import { isAllowedOrigin } from '../config/origin.js';
 declare module 'express-serve-static-core' {
   interface Request {
     actor: Actor;
@@ -28,7 +29,7 @@ export function security(auth: ReturnType<typeof authService>, config: Config) {
     next();
   };
   const csrf: RequestHandler = (req, _res, next) => {
-    if (req.get('origin') !== config.CLIENT_ORIGIN)
+    if (!isAllowedOrigin(req.get('origin'), config))
       throw new AppError(403, 'Request origin is not permitted');
     const session: unknown = req.cookies?.[sessionName];
     const preauth: unknown = req.cookies?.[csrfName];

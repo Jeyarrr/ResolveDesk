@@ -8,13 +8,17 @@ import { authService } from './services/auth.js';
 import { permittedTicket } from './repositories/tickets.js';
 import { processEvents } from './services/notifications.js';
 import { monitorSla } from './services/sla.js';
+import { isAllowedOrigin } from './config/origin.js';
 
 export function startOperations(server: HttpServer, db: Database, config: Config) {
   const auth = authService(db, config);
   const io = new Server(server, {
     transports: ['websocket'],
-    cors: { origin: config.CLIENT_ORIGIN, credentials: true },
-    allowRequest: (req, done) => done(null, req.headers.origin === config.CLIENT_ORIGIN),
+    cors: {
+      origin: (origin, callback) => callback(null, isAllowedOrigin(origin, config)),
+      credentials: true,
+    },
+    allowRequest: (req, done) => done(null, isAllowedOrigin(req.headers.origin, config)),
     maxHttpBufferSize: 2048,
   });
   const tokens = new Map<string, string>();
@@ -26,7 +30,7 @@ export function startOperations(server: HttpServer, db: Database, config: Config
   }
   io.use(async (socket, next) => {
     try {
-      if (socket.handshake.headers.origin !== config.CLIENT_ORIGIN)
+      if (!isAllowedOrigin(socket.handshake.headers.origin, config))
         throw new Error('Origin denied');
       const name = config.NODE_ENV === 'production' ? '__Host-resolvedesk' : 'resolvedesk';
       const token = socket.handshake.headers.cookie
